@@ -67,6 +67,13 @@ chassisBody.addShape(chassisShape);
 chassisBody.position.set(0, 1, 0);
 chassisBody.angularVelocity.set(0, 0.5, 0);
 
+//giving chassisBody a 3mesh to deal with following camera
+
+// const geometry = new THREE.BoxGeometry(1, 0.5, 2);
+// const material = new THREE.MeshLambertMaterial({ color: 0xfb8e00 });
+// const mesh = new THREE.Mesh(geometry, material);
+// mesh.position.set(0, 1, 0);
+
 world.addBody(chassisBody);
 
 const vehicle = new CANNON.RaycastVehicle({
@@ -194,18 +201,16 @@ function animate() {
 
 function updatePhysics() {
 	world.step(1 / 60);
-	camera.position.copy(
-		new CANNON.Vec3(
-			chassisBody.position.x + 10,
-			chassisBody.position.y + 10,
-			chassisBody.position.z + 10
-		)
-	);
-	camera.lookAt(
-		chassisBody.position.x,
-		chassisBody.position.y,
-		chassisBody.position.z
-	);
+	const idealOffSet = new THREE.Vector3(0, 5, 15);
+	idealOffSet.applyQuaternion(chassisBody.quaternion);
+	idealOffSet.add(chassisBody.position);
+	camera.position.copy(idealOffSet);
+
+	const idealLookAt = new THREE.Vector3(0, 0, -10);
+	idealLookAt.applyQuaternion(chassisBody.quaternion);
+	idealLookAt.add(chassisBody.position);
+
+	camera.lookAt(idealLookAt);
 	// mesh.position.copy(body.position);
 }
 
