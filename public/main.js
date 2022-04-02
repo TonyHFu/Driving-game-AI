@@ -201,7 +201,7 @@ function animate() {
 
 function updatePhysics() {
 	world.step(1 / 60);
-	const idealOffSet = new THREE.Vector3(0, 8, 15);
+	const idealOffSet = new THREE.Vector3(0, 12, 15);
 	idealOffSet.applyQuaternion(chassisBody.quaternion);
 	idealOffSet.add(chassisBody.position);
 	camera.position.lerp(idealOffSet, 0.1);

@@ -1,0 +1,12 @@
+body {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+#reset {
+	position: fixed;
+	left: 10px;
+	bottom: 10px;
+}
