@@ -279,3 +279,29 @@ document.addEventListener("keyup", event => {
 		vehicle.setSteeringValue(0, 1);
 	}
 });
+
+const onResize = () => {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+
+	renderer.setSize(window.innerWidth, window.innerHeight);
+};
+window.addEventListener("resize", onResize);
+
+const reset = () => {
+	chassisBody.position.set(0, 1, 0);
+	vehicle.applyEngineForce(0, 0);
+	vehicle.applyEngineForce(0, 1);
+	vehicle.applyEngineForce(0, 2);
+	vehicle.applyEngineForce(0, 3);
+
+	vehicle.setBrake(0, 0);
+	vehicle.setBrake(0, 1);
+	vehicle.setBrake(0, 2);
+	vehicle.setBrake(0, 3);
+
+	vehicle.setSteeringValue(0, 0);
+	vehicle.setSteeringValue(0, 1);
+};
+
+document.getElementById("reset").addEventListener("click", reset);
