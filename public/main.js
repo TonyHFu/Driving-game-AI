@@ -30,7 +30,7 @@ world.solver.iterations = 40;
 
 const wheelMaterial = new CANNON.Material("wheelMaterial");
 
-const floorBodyMaterial = new CANNON.Material("groundMaterial");
+const floorBodyMaterial = new CANNON.Material("floorBodyMaterial");
 
 //Wheel Ground Contact
 
@@ -62,7 +62,7 @@ world.addContactMaterial(wheelGroundContactMaterial);
 
 //Make car
 const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
-const chassisBody = new CANNON.Body({ mass: 150 });
+const chassisBody = new CANNON.Body({ mass: 150, linearDamping: 0.5 });
 chassisBody.addShape(chassisShape);
 chassisBody.position.set(0, 1, 0);
 chassisBody.angularVelocity.set(0, 0.5, 0);
@@ -90,8 +90,9 @@ const wheelOptions = {
 	chassisConnectionPointLocal: new CANNON.Vec3(1, 1, 0),
 	maxSuspensionTravel: 0.3,
 	customSlidingRotationalSpeed: -30,
-	useCurstomSlidingRotationalSpeed: true,
+	useCustomSlidingRotationalSpeed: true,
 };
+
 wheelOptions.chassisConnectionPointLocal.set(1, 0, -1);
 vehicle.addWheel(wheelOptions);
 
@@ -117,6 +118,7 @@ vehicle.wheelInfos.forEach(wheel => {
 	const wheelBody = new CANNON.Body({
 		mass: 10,
 		material: wheelMaterial,
+		// angularDamping: 0.5,
 	});
 	wheelBody.type = CANNON.Body.KINEMATIC;
 	wheelBody.collisionFilterGroup = 0; // turn off collisions
@@ -125,7 +127,6 @@ vehicle.wheelInfos.forEach(wheel => {
 	wheelBody.addShape(cylinderShape, new CANNON.Vec3(), q);
 
 	wheelBodies.push(wheelBody);
-
 	world.addBody(wheelBody);
 });
 
@@ -166,7 +167,7 @@ for (let i = 0; i < sizeX; i++) {
 var hfShape = new CANNON.Heightfield(matrix, {
 	elementSize: 100 / sizeX,
 });
-var hfBody = new CANNON.Body({ mass: 0 });
+var hfBody = new CANNON.Body({ mass: 0, material: floorBodyMaterial });
 hfBody.addShape(hfShape);
 hfBody.position.set(
 	(-sizeX * hfShape.elementSize) / 2,
@@ -246,16 +247,30 @@ document.addEventListener("keydown", event => {
 });
 
 document.addEventListener("keyup", event => {
-	vehicle.setBrake(0, 0);
-	vehicle.setBrake(0, 1);
-	vehicle.setBrake(0, 2);
-	vehicle.setBrake(0, 3);
+	console.log("key up");
 
-	vehicle.applyEngineForce(0, 0);
-	vehicle.applyEngineForce(0, 1);
-	vehicle.applyEngineForce(0, 2);
-	vehicle.applyEngineForce(0, 3);
+	if (event.code === "KeyW") {
+		vehicle.applyEngineForce(0, 0);
+		vehicle.applyEngineForce(0, 1);
+		vehicle.applyEngineForce(0, 2);
+		vehicle.applyEngineForce(0, 3);
+	}
+	if (event.code === "KeyS") {
+		vehicle.applyEngineForce(0, 0);
+		vehicle.applyEngineForce(0, 1);
+		vehicle.applyEngineForce(0, 2);
+		vehicle.applyEngineForce(0, 3);
+	}
 
-	vehicle.setSteeringValue(0, 0);
-	vehicle.setSteeringValue(0, 1);
+	if (event.code === "KeyQ") {
+		vehicle.setBrake(0, 0);
+		vehicle.setBrake(0, 1);
+		vehicle.setBrake(0, 2);
+		vehicle.setBrake(0, 3);
+	}
+
+	if (event.code === "KeyA" || event.code === "KeyD") {
+		vehicle.setSteeringValue(0, 0);
+		vehicle.setSteeringValue(0, 1);
+	}
 });
