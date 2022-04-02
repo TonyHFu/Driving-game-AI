@@ -47,6 +47,8 @@ const wheelMaterial = new CANNON.Material("wheelMaterial");
 
 const floorBodyMaterial = new CANNON.Material("floorBodyMaterial");
 
+const obstacleMaterial = new CANNON.Material("obstacleMaterial");
+
 //Wheel Ground Contact
 
 const wheelGroundContactMaterial = new CANNON.ContactMaterial(
@@ -59,6 +61,17 @@ const wheelGroundContactMaterial = new CANNON.ContactMaterial(
 	}
 );
 world.addContactMaterial(wheelGroundContactMaterial);
+
+const wheelObstacleContactMaterial = new CANNON.ContactMaterial(
+	wheelMaterial,
+	obstacleMaterial,
+	{
+		friction: 0.3,
+		restitution: 0,
+		contactEquationStiffness: 1000,
+	}
+);
+world.addContactMaterial(wheelObstacleContactMaterial);
 
 //Make box
 
@@ -161,6 +174,32 @@ world.addEventListener("postStep", () => {
 		wheelBody.quaternion.copy(transform.quaternion);
 	}
 });
+
+//Add obstacles
+
+const obstacles = [];
+
+for (let i = 0; i < 20; i++) {
+	const obstacleShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+	const obstacleMass = 200000;
+	const obstacleBody = new CANNON.Body({
+		mass: obstacleMass,
+		material: obstacleMaterial,
+		shape: obstacleShape,
+	});
+	const xSign = Math.round(Math.random()) ? 1 : -1;
+	const zSign = Math.round(Math.random()) ? 1 : -1;
+
+	const xPosition = (Math.random() * 30 + 10) * xSign;
+	const zPosition = (Math.random() * 30 + 10) * zSign;
+
+	obstacleBody.position.set(xPosition, 10, zPosition);
+
+	// obstacleBody.position.set(0, 1, 0);
+
+	world.addBody(obstacleBody);
+	obstacles.push(obstacleBody);
+}
 
 //Adding marker of car position
 
