@@ -3,6 +3,8 @@ import * as THREE from "./vendor/three.module.js";
 import * as CANNON from "./vendor/cannon-es.js";
 import CannonDebugger from "./vendor/cannon-es-debugger.js";
 
+//Initializing score
+let score = 0;
 // Initializing THREE JS
 const scene = new THREE.Scene();
 
@@ -21,6 +23,19 @@ const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 
 camera.position.set(4, 4, 4);
 camera.lookAt(0, 0, 0);
+
+//Adding finish point
+
+const finishGeometry = new THREE.CylinderGeometry(1, 1, 2, 20);
+const finishMaterial = new THREE.MeshBasicMaterial({
+	color: 0xffff00,
+	opacity: 0.5,
+	transparent: true,
+});
+const finish = new THREE.Mesh(finishGeometry, finishMaterial);
+
+finish.position.set(20, 1, 20);
+scene.add(finish);
 
 // Initializing CANNON
 const world = new CANNON.World();
@@ -64,7 +79,7 @@ world.addContactMaterial(wheelGroundContactMaterial);
 const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
 const chassisBody = new CANNON.Body({ mass: 150, linearDamping: 0.5 });
 chassisBody.addShape(chassisShape);
-chassisBody.position.set(0, 1, 0);
+chassisBody.position.set(0, 3, 0);
 chassisBody.angularVelocity.set(0, 0.5, 0);
 
 //giving chassisBody a 3mesh to deal with following camera
@@ -147,6 +162,21 @@ world.addEventListener("postStep", () => {
 	}
 });
 
+//Adding marker of car position
+
+const markerGeometry = new THREE.SphereGeometry(0.1, 32, 16);
+const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+marker.position.copy(chassisBody.position);
+scene.add(marker);
+
+//adding marker to finish position
+const finishMarkerGeometry = new THREE.SphereGeometry(0.1, 32, 16);
+const finishMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const finishMarker = new THREE.Mesh(finishMarkerGeometry, finishMarkerMaterial);
+finishMarker.position.copy(finish.position);
+scene.add(finishMarker);
+
 // Using plane as floor
 
 // const floorShape = new CANNON.Plane();
@@ -178,11 +208,13 @@ var hfBody = new CANNON.Body({ mass: 0, material: floorBodyMaterial });
 hfBody.addShape(hfShape);
 hfBody.position.set(
 	(-sizeX * hfShape.elementSize) / 2,
-	-4,
+	0,
 	(sizeY * hfShape.elementSize) / 2
 );
 hfBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 world.addBody(hfBody);
+
+////Rendering
 
 const debugRenderer = new CannonDebugger(scene, world);
 
@@ -199,7 +231,32 @@ function animate() {
 	renderer.render(scene, camera);
 }
 
+const reset = () => {
+	chassisBody.position.set(0, 3, 0);
+	chassisBody.quaternion.set(0, 0, 0, 1);
+	chassisBody.angularVelocity.set(0, 0.5, 0);
+	chassisBody.velocity.setZero();
+
+	vehicle.applyEngineForce(0, 0);
+	vehicle.applyEngineForce(0, 1);
+	vehicle.applyEngineForce(0, 2);
+	vehicle.applyEngineForce(0, 3);
+
+	vehicle.setBrake(0, 0);
+	vehicle.setBrake(0, 1);
+	vehicle.setBrake(0, 2);
+	vehicle.setBrake(0, 3);
+
+	vehicle.setSteeringValue(0, 0);
+	vehicle.setSteeringValue(0, 1);
+};
+
 function updatePhysics() {
+	if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+		reset();
+		score++;
+		document.getElementById("score").innerHTML = score;
+	}
 	world.step(1 / 60);
 	const idealOffSet = new THREE.Vector3(0, 12, 15);
 	idealOffSet.applyQuaternion(chassisBody.quaternion);
@@ -212,12 +269,16 @@ function updatePhysics() {
 
 	camera.lookAt(idealLookAt);
 	// mesh.position.copy(body.position);
+
+	marker.position.copy(chassisBody.position);
 }
 
 // renderer.setAnimationLoop(animation);
 animate();
 
 document.body.appendChild(renderer.domElement);
+
+//Event listeners
 
 document.addEventListener("keydown", event => {
 	console.log(event.code);
@@ -287,21 +348,5 @@ const onResize = () => {
 	renderer.setSize(window.innerWidth, window.innerHeight);
 };
 window.addEventListener("resize", onResize);
-
-const reset = () => {
-	chassisBody.position.set(0, 1, 0);
-	vehicle.applyEngineForce(0, 0);
-	vehicle.applyEngineForce(0, 1);
-	vehicle.applyEngineForce(0, 2);
-	vehicle.applyEngineForce(0, 3);
-
-	vehicle.setBrake(0, 0);
-	vehicle.setBrake(0, 1);
-	vehicle.setBrake(0, 2);
-	vehicle.setBrake(0, 3);
-
-	vehicle.setSteeringValue(0, 0);
-	vehicle.setSteeringValue(0, 1);
-};
 
 document.getElementById("reset").addEventListener("click", reset);
