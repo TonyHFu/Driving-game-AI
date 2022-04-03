@@ -1,7 +1,10 @@
-import * as THREE from "./vendor/three.module.js";
+import * as THREE from "three";
 // import { OrbitControls } from "./vendor/OrbitControls.js";
-import * as CANNON from "./vendor/cannon-es.js";
-import CannonDebugger from "./vendor/cannon-es-debugger.js";
+import * as CANNON from "cannon-es";
+import CannonDebugger from "cannon-es-debugger";
+import * as tf from "@tensorflow/tfjs-node";
+
+import { actionModel, qModel } from "./model.js";
 
 //Initializing score
 let score = 0;
@@ -262,10 +265,6 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, camera);
 
 function animate() {
-	// console.log(chassisBody.position);
-	// console.log(chassisBody.velocity);
-	console.log(chassisBody.quaternion);
-
 	requestAnimationFrame(animate);
 	updatePhysics();
 	debugRenderer.update();
@@ -298,9 +297,6 @@ function updatePhysics() {
 		score++;
 		document.getElementById("score").innerHTML = score;
 	}
-	if (chassisBody.position.y < 0) {
-		reset();
-	}
 	world.step(1 / 60);
 	const idealOffSet = new THREE.Vector3(0, 12, 15);
 	idealOffSet.applyQuaternion(chassisBody.quaternion);
@@ -325,7 +321,7 @@ document.body.appendChild(renderer.domElement);
 //Event listeners
 
 document.addEventListener("keydown", event => {
-	// console.log(event.code);
+	console.log(event.code);
 	if (event.code === "KeyW") {
 		vehicle.applyEngineForce(500, 0);
 		vehicle.applyEngineForce(500, 1);
@@ -357,7 +353,7 @@ document.addEventListener("keydown", event => {
 });
 
 document.addEventListener("keyup", event => {
-	// console.log("key up");
+	console.log("key up");
 
 	if (event.code === "KeyW") {
 		vehicle.applyEngineForce(0, 0);
@@ -394,3 +390,31 @@ const onResize = () => {
 window.addEventListener("resize", onResize);
 
 document.getElementById("reset").addEventListener("click", reset);
+
+const EPISODES = 100;
+
+const currentState = [
+	chassisBody.position.x / 50,
+	chassisBody.position.y / 50,
+	chassisBody.position.z / 50,
+	chassisBody.velocity.x / 17,
+	chassisBody.velocity.z / 17,
+	chassisBody.quaternion.x,
+	chassisBody.quaternion.z,
+];
+
+// while (true) {
+// 	const currentState = [
+// 		chassisBody.position.x / 50,
+// 		chassisBody.position.y / 50,
+// 		chassisBody.position.z / 50,
+// 		chassisBody.velocity.x / 17,
+// 		chassisBody.velocity.z / 17,
+// 		chassisBody.quaternion.x,
+// 		chassisBody.quaternion.z,
+// 	];
+
+// 	tf.tidy(() => {
+// 		const state = tf.tensor2d(currentState, [1, 7]);
+// 	});
+// }

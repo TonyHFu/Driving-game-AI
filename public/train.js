@@ -3,6 +3,14 @@ import * as THREE from "./vendor/three.module.js";
 import * as CANNON from "./vendor/cannon-es.js";
 import CannonDebugger from "./vendor/cannon-es-debugger.js";
 
+// import model from "./model.js";
+
+const model = tf.sequential();
+model.add(tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" }));
+model.add(tf.layers.dense({ units: 20, activation: "relu" }));
+model.add(tf.layers.dense({ units: 6 }));
+model.compile({ optimizer: "adam", loss: "meanSquaredError" });
+
 //Initializing score
 let score = 0;
 // Initializing THREE JS
@@ -261,17 +269,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, camera);
 
-function animate() {
-	// console.log(chassisBody.position);
-	// console.log(chassisBody.velocity);
-	console.log(chassisBody.quaternion);
-
-	requestAnimationFrame(animate);
-	updatePhysics();
-	debugRenderer.update();
-	renderer.render(scene, camera);
-}
-
 const reset = () => {
 	chassisBody.position.set(0, 3, 0);
 	chassisBody.quaternion.set(0, 0, 0, 1);
@@ -298,9 +295,6 @@ function updatePhysics() {
 		score++;
 		document.getElementById("score").innerHTML = score;
 	}
-	if (chassisBody.position.y < 0) {
-		reset();
-	}
 	world.step(1 / 60);
 	const idealOffSet = new THREE.Vector3(0, 12, 15);
 	idealOffSet.applyQuaternion(chassisBody.quaternion);
@@ -318,7 +312,6 @@ function updatePhysics() {
 }
 
 // renderer.setAnimationLoop(animation);
-animate();
 
 document.body.appendChild(renderer.domElement);
 
@@ -394,3 +387,118 @@ const onResize = () => {
 window.addEventListener("resize", onResize);
 
 document.getElementById("reset").addEventListener("click", reset);
+
+const EPISODES = 100;
+const epsilon = 0.5;
+// import * as tf from "@tensorflow/tfjs-node";
+
+const testCallback = () => {
+	const currentState = [
+		chassisBody.position.x / 50,
+		chassisBody.position.y / 50,
+		chassisBody.position.z / 50,
+		chassisBody.velocity.x / 17,
+		chassisBody.velocity.z / 17,
+		chassisBody.quaternion.x,
+		chassisBody.quaternion.z,
+	];
+
+	const actionSet = [
+		"left",
+		"right",
+		"forward",
+		"backward",
+		"brake",
+		"nothing",
+	];
+
+	const state = tf.tidy(() => {
+		const returnState = tf.tensor2d(currentState, [1, 7]);
+		return returnState;
+	});
+
+	// console.log(currentState);
+	// state.print();
+	// console.log(state);
+	let useNetwork = false;
+	if (Math.random() < epsilon) {
+		useNetwork = true;
+	}
+	const preds = tf.tidy(() => {
+		return model.predict(state);
+	});
+	const predsArr = preds.dataSync();
+	const action = useNetwork
+		? actionSet[predsArr.indexOf(Math.max(...predsArr))]
+		: actionSet[Math.floor(Math.random() * 6)];
+
+	// preds.print();
+	console.log(action);
+
+	switch (action) {
+		case "left":
+			vehicle.setSteeringValue(0.5, 0);
+			vehicle.setSteeringValue(0.5, 1);
+			break;
+		case "right":
+			vehicle.setSteeringValue(-0.5, 0);
+			vehicle.setSteeringValue(-0.5, 1);
+			break;
+		case "forward":
+			vehicle.applyEngineForce(500, 0);
+			vehicle.applyEngineForce(500, 1);
+			vehicle.applyEngineForce(500, 2);
+			vehicle.applyEngineForce(500, 3);
+			break;
+		case "backward":
+			vehicle.applyEngineForce(-500, 0);
+			vehicle.applyEngineForce(-500, 1);
+			vehicle.applyEngineForce(-500, 2);
+			vehicle.applyEngineForce(-500, 3);
+			break;
+		case "brake":
+			vehicle.setBrake(50, 0);
+			vehicle.setBrake(50, 1);
+			vehicle.setBrake(50, 2);
+			vehicle.setBrake(50, 3);
+			break;
+		case "nothing":
+			vehicle.applyEngineForce(0, 0);
+			vehicle.applyEngineForce(0, 1);
+			vehicle.applyEngineForce(0, 2);
+			vehicle.applyEngineForce(0, 3);
+			vehicle.setBrake(0, 0);
+			vehicle.setBrake(0, 1);
+			vehicle.setBrake(0, 2);
+			vehicle.setBrake(0, 3);
+			vehicle.setSteeringValue(0, 0);
+			vehicle.setSteeringValue(0, 1);
+			break;
+	}
+};
+
+// while (true) {
+// 	const currentState = [
+// 		chassisBody.position.x / 50,
+// 		chassisBody.position.y / 50,
+// 		chassisBody.position.z / 50,
+// 		chassisBody.velocity.x / 17,
+// 		chassisBody.velocity.z / 17,
+// 		chassisBody.quaternion.x,
+// 		chassisBody.quaternion.z,
+// 	];
+
+// 	tf.tidy(() => {
+// 		const state = tf.tensor2d(currentState, [1, 7]);
+// 	});
+// }
+
+function animate() {
+	testCallback();
+	// console.log(currentState);
+	requestAnimationFrame(animate);
+	updatePhysics();
+	debugRenderer.update();
+	renderer.render(scene, camera);
+}
+animate();

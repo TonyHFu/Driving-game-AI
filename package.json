@@ -1,22 +1,26 @@
 {
-  "name": "mygame",
-  "version": "1.0.0",
-  "description": "",
-  "main": "express_server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "./node_modules/.bin/nodemon -L express_server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cannon": "^0.6.2",
-    "cannon-es": "^0.19.0",
-    "cannon-es-debugger": "^1.0.0",
-    "express": "^4.17.3"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.15"
-  }
+	"name": "mygame",
+	"version": "1.0.0",
+	"description": "",
+	"main": "express_server.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "./node_modules/.bin/nodemon -L express_server.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@tensorflow/tfjs": "^3.15.0",
+		"@tensorflow/tfjs-node": "^3.15.0",
+		"cannon": "^0.6.2",
+		"cannon-es": "^0.19.0",
+		"cannon-es-debugger": "^1.0.0",
+		"express": "^4.17.3",
+		"three": "^0.139.2"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.15"
+	},
+	"type": "module"
 }
