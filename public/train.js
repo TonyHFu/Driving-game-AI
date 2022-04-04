@@ -295,6 +295,10 @@ function updatePhysics() {
 		score++;
 		document.getElementById("score").innerHTML = score;
 	}
+
+	if (chassisBody.position.y < 0) {
+		reset();
+	}
 	world.step(1 / 60);
 	const idealOffSet = new THREE.Vector3(0, 12, 15);
 	idealOffSet.applyQuaternion(chassisBody.quaternion);
@@ -389,10 +393,18 @@ window.addEventListener("resize", onResize);
 document.getElementById("reset").addEventListener("click", reset);
 
 const EPISODES = 100;
-const epsilon = 0.5;
+let epsilon = 0.5;
+const EPSILON_DECAY = 0.999999;
+const MIN_EPSILON = 0.01;
+const DISCOUNT = 0.99;
+const MIN_REPLAY_MEMORY_SIZE = 1_000;
+const MINIBATCH_SIZE = 6;
+const REPLAY_MEMORY_SIZE = 50_000;
 // import * as tf from "@tensorflow/tfjs-node";
 
-const testCallback = () => {
+const replayMemory = [];
+
+const testCallback = async function () {
 	const currentState = [
 		chassisBody.position.x / 50,
 		chassisBody.position.y / 50,
@@ -403,6 +415,11 @@ const testCallback = () => {
 		chassisBody.quaternion.z,
 	];
 
+	const state = tf.tidy(() => {
+		const returnState = tf.tensor2d(currentState, [1, 7]);
+		return returnState;
+	});
+
 	const actionSet = [
 		"left",
 		"right",
@@ -412,28 +429,26 @@ const testCallback = () => {
 		"nothing",
 	];
 
-	const state = tf.tidy(() => {
-		const returnState = tf.tensor2d(currentState, [1, 7]);
-		return returnState;
-	});
-
 	// console.log(currentState);
 	// state.print();
 	// console.log(state);
-	let useNetwork = false;
+	let useNetwork = true;
 	if (Math.random() < epsilon) {
-		useNetwork = true;
+		useNetwork = false;
+		console.log(`making random move (epsilon = ${epsilon})`);
 	}
 	const preds = tf.tidy(() => {
 		return model.predict(state);
 	});
 	const predsArr = preds.dataSync();
-	const action = useNetwork
-		? actionSet[predsArr.indexOf(Math.max(...predsArr))]
-		: actionSet[Math.floor(Math.random() * 6)];
+	const actionIndex = useNetwork
+		? predsArr.indexOf(Math.max(...predsArr))
+		: Math.floor(Math.random() * 6);
 
+	// console.log("preds");
 	// preds.print();
-	console.log(action);
+	const action = actionSet[actionIndex];
+	console.log("action", action);
 
 	switch (action) {
 		case "left":
@@ -475,29 +490,136 @@ const testCallback = () => {
 			vehicle.setSteeringValue(0, 1);
 			break;
 	}
+
+	updatePhysics();
+
+	let done = false;
+	let reward = 0;
+	if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+		reward = 1;
+		done = true;
+	}
+
+	const newCurrentState = [
+		chassisBody.position.x / 50,
+		chassisBody.position.y / 50,
+		chassisBody.position.z / 50,
+		chassisBody.velocity.x / 17,
+		chassisBody.velocity.z / 17,
+		chassisBody.quaternion.x,
+		chassisBody.quaternion.z,
+	];
+
+	const newState = tf.tidy(() => {
+		const returnState = tf.tensor2d(newCurrentState, [1, 7]);
+		return returnState;
+	});
+
+	const newPreds = tf.tidy(() => {
+		return model.predict(newState);
+	});
+
+	// console.log("reward", reward);
+
+	// console.log("newPreds");
+	// newPreds.print();
+
+	const newPredsArr = newPreds.dataSync();
+
+	const maxNewQ = Math.max(...newPredsArr);
+
+	const newCurrentQ = reward + DISCOUNT * maxNewQ;
+
+	// console.log("preds again");
+	// preds.print();
+
+	predsArr[actionIndex] = newCurrentQ;
+
+	const updatedPreds = tf.tensor2d(predsArr, preds.shape);
+
+	// console.log("updated preds");
+	// updatedPreds.print();
+
+	if (replayMemory.length >= REPLAY_MEMORY_SIZE) {
+		replayMemory.shift();
+	}
+
+	replayMemory.push([currentState, actionIndex, reward, newCurrentState, done]);
+
+	if (epsilon !== MIN_EPSILON) {
+		epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
+	}
+
+	if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
+		// console.log("memory length", replayMemory.length);
+		return;
+	}
+
+	const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
+
+	const currentStates = [];
+	const actionIndices = [];
+	const rewards = [];
+	const newCurrentStates = [];
+	const dones = [];
+	const states = [];
+	const newStates = [];
+	const currentQs = [];
+	const futureQs = [];
+	const updatedQs = [];
+
+	miniBatch.forEach(([state, action, reward, nextState, done], index) => {
+		currentStates.push(state);
+		actionIndices.push(action);
+		rewards.push(reward);
+		newCurrentStates.push(nextState);
+		dones.push(done);
+
+		const x = tf.tensor2d(state, [1, 7]);
+		const currentQ = model.predict(x);
+		currentQs.push(currentQ);
+		states.push(x);
+
+		const newState = tf.tensor2d(nextState, [1, 7]);
+		const futureQ = model.predict(newState);
+		futureQs.push(futureQ);
+		newStates.push(newState);
+
+		currentQ[action] = nextState
+			? reward + DISCOUNT * futureQ.max().dataSync()
+			: reward;
+
+		updatedQs.push(currentQ.dataSync());
+	});
+
+	// miniBatch.forEach(([, action, reward, nextState, done], index) => {
+	// 	console.log([action, reward, nextState, done]);
+	// 	futureQs[index].print();
+
+	// 	const currentQ = currentQs[index];
+	// 	currentQ[action] = nextState
+	// 		? reward + DISCOUNT * futureQs[index].max().dataSync()
+	// 		: reward;
+	// 	updatedQs.push(currentQ.dataSync());
+	// });
+
+	const X = tf.tensor2d(currentStates);
+	// console.log(currentStates);
+	// X.print();
+
+	// console.log(futureQs[0].shape);
+
+	// console.log("updatedQs", updatedQs);
+	const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, 6]);
+
+	await model.fit(X, y);
 };
 
-// while (true) {
-// 	const currentState = [
-// 		chassisBody.position.x / 50,
-// 		chassisBody.position.y / 50,
-// 		chassisBody.position.z / 50,
-// 		chassisBody.velocity.x / 17,
-// 		chassisBody.velocity.z / 17,
-// 		chassisBody.quaternion.x,
-// 		chassisBody.quaternion.z,
-// 	];
-
-// 	tf.tidy(() => {
-// 		const state = tf.tensor2d(currentState, [1, 7]);
-// 	});
-// }
-
-function animate() {
-	testCallback();
-	// console.log(currentState);
+async function animate() {
+	await testCallback();
+	// console.log("trained!");
 	requestAnimationFrame(animate);
-	updatePhysics();
+	// updatePhysics();
 	debugRenderer.update();
 	renderer.render(scene, camera);
 }

@@ -17,6 +17,7 @@
 		"cannon-es": "^0.19.0",
 		"cannon-es-debugger": "^1.0.0",
 		"express": "^4.17.3",
+		"lodash": "^4.17.21",
 		"three": "^0.139.2"
 	},
 	"devDependencies": {
