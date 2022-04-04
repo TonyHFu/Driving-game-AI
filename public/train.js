@@ -524,18 +524,18 @@ const testCallback = async function () {
 	// console.log("newPreds");
 	// newPreds.print();
 
-	const newPredsArr = newPreds.dataSync();
+	// const newPredsArr = newPreds.dataSync();
 
-	const maxNewQ = Math.max(...newPredsArr);
+	// const maxNewQ = Math.max(...newPredsArr);
 
-	const newCurrentQ = reward + DISCOUNT * maxNewQ;
+	// const newCurrentQ = reward + DISCOUNT * maxNewQ;
 
 	// console.log("preds again");
 	// preds.print();
 
-	predsArr[actionIndex] = newCurrentQ;
+	// predsArr[actionIndex] = newCurrentQ;
 
-	const updatedPreds = tf.tensor2d(predsArr, preds.shape);
+	// const updatedPreds = tf.tensor2d(predsArr, preds.shape);
 
 	// console.log("updated preds");
 	// updatedPreds.print();
@@ -613,6 +613,7 @@ const testCallback = async function () {
 	const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, 6]);
 
 	await model.fit(X, y);
+	console.log("trained!");
 };
 
 async function animate() {
