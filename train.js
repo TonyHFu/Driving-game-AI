@@ -1,44 +1,21 @@
 import * as THREE from "three";
-// import { OrbitControls } from "./vendor/OrbitControls.js";
 import * as CANNON from "cannon-es";
 import CannonDebugger from "cannon-es-debugger";
 import * as tf from "@tensorflow/tfjs-node";
+import _ from "lodash";
 
-import { actionModel, qModel } from "./model.js";
+// import model from "./model.js";
+
+const model = tf.sequential();
+model.add(tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" }));
+model.add(tf.layers.dense({ units: 20, activation: "relu" }));
+model.add(tf.layers.dense({ units: 8 }));
+model.compile({ optimizer: "adam", loss: "meanSquaredError" });
 
 //Initializing score
 let score = 0;
-// Initializing THREE JS
-const scene = new THREE.Scene();
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-directionalLight.position.set(10, 20, 0);
-scene.add(directionalLight);
-
-const fov = 60;
-const aspect = window.innerWidth / window.innerHeight;
-const near = 1.0;
-const far = 1000.0;
-const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-
-camera.position.set(4, 4, 4);
-camera.lookAt(0, 0, 0);
-
-//Adding finish point
-
-const finishGeometry = new THREE.CylinderGeometry(1, 1, 2, 20);
-const finishMaterial = new THREE.MeshBasicMaterial({
-	color: 0xffff00,
-	opacity: 0.5,
-	transparent: true,
-});
-const finish = new THREE.Mesh(finishGeometry, finishMaterial);
-
-finish.position.set(20, 1, 20);
-scene.add(finish);
+const finishPosition = new CANNON.Vec3(-20, 1, -20);
 
 // Initializing CANNON
 const world = new CANNON.World();
@@ -76,34 +53,12 @@ const wheelObstacleContactMaterial = new CANNON.ContactMaterial(
 );
 world.addContactMaterial(wheelObstacleContactMaterial);
 
-//Make box
-
-// const geometry = new THREE.BoxGeometry(3, 1, 3);
-// const material = new THREE.MeshLambertMaterial({ color: 0xfb8e00 });
-// const mesh = new THREE.Mesh(geometry, material);
-// mesh.position.set(0, 5, 0);
-// scene.add(mesh);
-
-// const shape = new CANNON.Box(new CANNON.Vec3(1.5, 0.5, 1.5));
-// const mass = 5;
-// const boxBodyMaterial = new CANNON.Material();
-// const body = new CANNON.Body({ mass, shape, material: boxBodyMaterial });
-// body.position.set(0, 5, 0);
-// world.addBody(body);
-
 //Make car
 const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
 const chassisBody = new CANNON.Body({ mass: 150, linearDamping: 0.5 });
 chassisBody.addShape(chassisShape);
-chassisBody.position.set(0, 3, 0);
+chassisBody.position.set(0, 1, 0);
 chassisBody.angularVelocity.set(0, 0.5, 0);
-
-//giving chassisBody a 3mesh to deal with following camera
-
-// const geometry = new THREE.BoxGeometry(1, 0.5, 2);
-// const material = new THREE.MeshLambertMaterial({ color: 0xfb8e00 });
-// const mesh = new THREE.Mesh(geometry, material);
-// mesh.position.set(0, 1, 0);
 
 world.addBody(chassisBody);
 
@@ -180,53 +135,27 @@ world.addEventListener("postStep", () => {
 
 //Add obstacles
 
-const obstacles = [];
+// const obstacles = [];
 
-for (let i = 0; i < 20; i++) {
-	const obstacleShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
-	const obstacleMass = 2;
-	const obstacleBody = new CANNON.Body({
-		mass: obstacleMass,
-		material: obstacleMaterial,
-		shape: obstacleShape,
-	});
-	const xSign = Math.round(Math.random()) ? 1 : -1;
-	const zSign = Math.round(Math.random()) ? 1 : -1;
+// for (let i = 0; i < 20; i++) {
+// 	const obstacleShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+// 	const obstacleMass = 2;
+// 	const obstacleBody = new CANNON.Body({
+// 		mass: obstacleMass,
+// 		material: obstacleMaterial,
+// 		shape: obstacleShape,
+// 	});
+// 	const xSign = Math.round(Math.random()) ? 1 : -1;
+// 	const zSign = Math.round(Math.random()) ? 1 : -1;
 
-	const xPosition = (Math.random() * 30 + 10) * xSign;
-	const zPosition = (Math.random() * 30 + 10) * zSign;
+// 	const xPosition = (Math.random() * 30 + 10) * xSign;
+// 	const zPosition = (Math.random() * 30 + 10) * zSign;
 
-	obstacleBody.position.set(xPosition, 10, zPosition);
+// 	obstacleBody.position.set(xPosition, 10, zPosition);
 
-	world.addBody(obstacleBody);
-	obstacles.push(obstacleBody);
-}
-
-//Adding marker of car position
-
-const markerGeometry = new THREE.SphereGeometry(0.1, 32, 16);
-const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-marker.position.copy(chassisBody.position);
-scene.add(marker);
-
-//adding marker to finish position
-const finishMarkerGeometry = new THREE.SphereGeometry(0.1, 32, 16);
-const finishMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const finishMarker = new THREE.Mesh(finishMarkerGeometry, finishMarkerMaterial);
-finishMarker.position.copy(finish.position);
-scene.add(finishMarker);
-
-// Using plane as floor
-
-// const floorShape = new CANNON.Plane();
-// const floorBody = new CANNON.Body({
-// 	mass: 0,
-// 	shape: floorShape,
-// });
-// floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-// floorBody.position.set(0, 0, 0);
-// world.addBody(floorBody);
+// 	world.addBody(obstacleBody);
+// 	obstacles.push(obstacleBody);
+// }
 
 //Using heightfield
 
@@ -254,25 +183,8 @@ hfBody.position.set(
 hfBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 world.addBody(hfBody);
 
-////Rendering
-
-const debugRenderer = new CannonDebugger(scene, world);
-
-// const renderer = new THREE.WebGL1Renderer({ antialias: true });
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.render(scene, camera);
-
-function animate() {
-	requestAnimationFrame(animate);
-	updatePhysics();
-	debugRenderer.update();
-	renderer.render(scene, camera);
-}
-
 const reset = () => {
-	chassisBody.position.set(0, 3, 0);
+	chassisBody.position.set(0, 1, 0);
 	chassisBody.quaternion.set(0, 0, 0, 1);
 	chassisBody.angularVelocity.set(0, 0.5, 0);
 	chassisBody.velocity.setZero();
@@ -292,129 +204,285 @@ const reset = () => {
 };
 
 function updatePhysics() {
-	if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+	if (chassisBody.position.y < 0) {
 		reset();
+	}
+	world.step(1 / 60);
+}
+
+const EPISODES = 100;
+let epsilon = 0.5;
+const EPSILON_DECAY = 0.9999;
+const MIN_EPSILON = 0.01;
+const DISCOUNT = 0.99;
+const MIN_REPLAY_MEMORY_SIZE = 1000;
+const MINIBATCH_SIZE = 10;
+const REPLAY_MEMORY_SIZE = 50000;
+let epoch = 1;
+let episode = 1;
+let move = 1;
+
+const replayMemory = [];
+
+const consoleMemory = () => {
+	const size = replayMemory.length >= 3000 ? 3000 : replayMemory.length;
+	const sumRewards = replayMemory.slice(-1 * size).reduce((acc, memory) => {
+		acc += memory[2];
+		return acc;
+	}, 0);
+	const completes = replayMemory.slice(-1 * size).reduce((acc, memory) => {
+		if (memory[4]) {
+			acc++;
+		}
+		return acc;
+	}, 0);
+	const averageReward = sumRewards / size;
+	console.log(
+		`episode: ${episode} | avg_reward: ${averageReward} | completes: ${completes}`
+	);
+};
+
+const train = async function () {
+	if (move < 1000) {
+		process.stdout.clearLine();
+		process.stdout.cursorTo(0);
+		process.stdout.write(`move: ${move}`);
+	}
+
+	if (epoch >= 3000) {
+		consoleMemory();
+		await model.save(
+			`file:///Users/tonyfu/threeJs/myGame/models/my-model-episode-${episode}-v5-nodejs`
+		);
+		reset();
+		episode++;
+		epoch = 1;
+		epsilon = 0.5;
+	}
+
+	const currentState = [
+		chassisBody.position.x / 50,
+		chassisBody.position.y / 50,
+		chassisBody.position.z / 50,
+		chassisBody.velocity.x / 17,
+		chassisBody.velocity.z / 17,
+		chassisBody.quaternion.x,
+		chassisBody.quaternion.z,
+	];
+
+	const state = tf.tensor2d(currentState, [1, currentState.length]);
+
+	const actionSet = [
+		// "left",
+		// "right",
+		"left-forward",
+		"left-backward",
+		"right-forward",
+		"right-backward",
+		"forward",
+		"backward",
+		"brake",
+		"nothing",
+	];
+
+	// console.log(currentState);
+	// state.print();
+	// console.log(state);
+	let useNetwork = true;
+	if (Math.random() < epsilon) {
+		useNetwork = false;
+		// console.log(`making random move (epsilon = ${epsilon})`);
+	}
+
+	const preds = model.predict(state);
+	state.dispose();
+
+	const predsArr = preds.dataSync();
+	// console.log("preds");
+	// preds.print();
+	preds.dispose();
+
+	const actionIndex = useNetwork
+		? predsArr.indexOf(Math.max(...predsArr))
+		: Math.floor(Math.random() * 6);
+
+	const action = actionSet[actionIndex];
+	// console.log("action", action);
+
+	switch (action) {
+		// case "left":
+		// 	vehicle.setSteeringValue(0.5, 0);
+		// 	vehicle.setSteeringValue(0.5, 1);
+		// 	break;
+		// case "right":
+		// 	vehicle.setSteeringValue(-0.5, 0);
+		// 	vehicle.setSteeringValue(-0.5, 1);
+		// 	break;
+		case "left-forward":
+			vehicle.setSteeringValue(0.5, 0);
+			vehicle.setSteeringValue(0.5, 1);
+			vehicle.applyEngineForce(500, 0);
+			vehicle.applyEngineForce(500, 1);
+			vehicle.applyEngineForce(500, 2);
+			vehicle.applyEngineForce(500, 3);
+			break;
+		case "right-forward":
+			vehicle.setSteeringValue(-0.5, 0);
+			vehicle.setSteeringValue(-0.5, 1);
+			vehicle.applyEngineForce(500, 0);
+			vehicle.applyEngineForce(500, 1);
+			vehicle.applyEngineForce(500, 2);
+			vehicle.applyEngineForce(500, 3);
+			break;
+		case "left-backward":
+			vehicle.setSteeringValue(0.5, 0);
+			vehicle.setSteeringValue(0.5, 1);
+			vehicle.applyEngineForce(-500, 0);
+			vehicle.applyEngineForce(-500, 1);
+			vehicle.applyEngineForce(-500, 2);
+			vehicle.applyEngineForce(-500, 3);
+			break;
+		case "right-backward":
+			vehicle.setSteeringValue(-0.5, 0);
+			vehicle.setSteeringValue(-0.5, 1);
+			vehicle.applyEngineForce(-500, 0);
+			vehicle.applyEngineForce(-500, 1);
+			vehicle.applyEngineForce(-500, 2);
+			vehicle.applyEngineForce(-500, 3);
+			break;
+		case "forward":
+			vehicle.setSteeringValue(0, 0);
+			vehicle.setSteeringValue(0, 1);
+			vehicle.applyEngineForce(500, 0);
+			vehicle.applyEngineForce(500, 1);
+			vehicle.applyEngineForce(500, 2);
+			vehicle.applyEngineForce(500, 3);
+			break;
+		case "backward":
+			vehicle.setSteeringValue(0, 0);
+			vehicle.setSteeringValue(0, 1);
+			vehicle.applyEngineForce(-500, 0);
+			vehicle.applyEngineForce(-500, 1);
+			vehicle.applyEngineForce(-500, 2);
+			vehicle.applyEngineForce(-500, 3);
+			break;
+		case "brake":
+			vehicle.setBrake(50, 0);
+			vehicle.setBrake(50, 1);
+			vehicle.setBrake(50, 2);
+			vehicle.setBrake(50, 3);
+			break;
+		case "nothing":
+			vehicle.applyEngineForce(0, 0);
+			vehicle.applyEngineForce(0, 1);
+			vehicle.applyEngineForce(0, 2);
+			vehicle.applyEngineForce(0, 3);
+			vehicle.setBrake(0, 0);
+			vehicle.setBrake(0, 1);
+			vehicle.setBrake(0, 2);
+			vehicle.setBrake(0, 3);
+			vehicle.setSteeringValue(0, 0);
+			vehicle.setSteeringValue(0, 1);
+			break;
+	}
+
+	updatePhysics();
+
+	move++;
+
+	let done = false;
+
+	let reward = (142 - chassisBody.position.distanceTo(finishPosition)) / 200;
+
+	if (chassisBody.position.distanceTo(finishPosition) < 1.3) {
+		reward = 1;
+		done = true;
 		score++;
 		document.getElementById("score").innerHTML = score;
 	}
-	world.step(1 / 60);
-	const idealOffSet = new THREE.Vector3(0, 12, 15);
-	idealOffSet.applyQuaternion(chassisBody.quaternion);
-	idealOffSet.add(chassisBody.position);
-	camera.position.lerp(idealOffSet, 0.1);
 
-	const idealLookAt = new THREE.Vector3(0, 0, -10);
-	idealLookAt.applyQuaternion(chassisBody.quaternion);
-	idealLookAt.add(chassisBody.position);
+	// console.log("distance", chassisBody.position.distanceTo(finishPosition));
+	// console.log("reward", reward);
 
-	camera.lookAt(idealLookAt);
-	// mesh.position.copy(body.position);
+	const newCurrentState = [
+		chassisBody.position.x / 50,
+		chassisBody.position.y / 50,
+		chassisBody.position.z / 50,
+		chassisBody.velocity.x / 17,
+		chassisBody.velocity.z / 17,
+		chassisBody.quaternion.x,
+		chassisBody.quaternion.z,
+	];
 
-	marker.position.copy(chassisBody.position);
-}
-
-// renderer.setAnimationLoop(animation);
-animate();
-
-document.body.appendChild(renderer.domElement);
-
-//Event listeners
-
-document.addEventListener("keydown", event => {
-	console.log(event.code);
-	if (event.code === "KeyW") {
-		vehicle.applyEngineForce(500, 0);
-		vehicle.applyEngineForce(500, 1);
-		vehicle.applyEngineForce(500, 2);
-		vehicle.applyEngineForce(500, 3);
-	}
-	if (event.code === "KeyS") {
-		vehicle.applyEngineForce(-500, 0);
-		vehicle.applyEngineForce(-500, 1);
-		vehicle.applyEngineForce(-500, 2);
-		vehicle.applyEngineForce(-500, 3);
+	if (replayMemory.length >= REPLAY_MEMORY_SIZE) {
+		replayMemory.shift();
 	}
 
-	if (event.code === "KeyA") {
-		vehicle.setSteeringValue(0.5, 0);
-		vehicle.setSteeringValue(0.5, 1);
-	}
-	if (event.code === "KeyD") {
-		vehicle.setSteeringValue(-0.5, 0);
-		vehicle.setSteeringValue(-0.5, 1);
-	}
+	replayMemory.push([currentState, actionIndex, reward, newCurrentState, done]);
 
-	if (event.code === "KeyQ") {
-		vehicle.setBrake(50, 0);
-		vehicle.setBrake(50, 1);
-		vehicle.setBrake(50, 2);
-		vehicle.setBrake(50, 3);
-	}
-});
+	// console.log("memory length", replayMemory.length);
 
-document.addEventListener("keyup", event => {
-	console.log("key up");
-
-	if (event.code === "KeyW") {
-		vehicle.applyEngineForce(0, 0);
-		vehicle.applyEngineForce(0, 1);
-		vehicle.applyEngineForce(0, 2);
-		vehicle.applyEngineForce(0, 3);
-	}
-	if (event.code === "KeyS") {
-		vehicle.applyEngineForce(0, 0);
-		vehicle.applyEngineForce(0, 1);
-		vehicle.applyEngineForce(0, 2);
-		vehicle.applyEngineForce(0, 3);
+	if (epsilon !== MIN_EPSILON) {
+		epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
 	}
 
-	if (event.code === "KeyQ") {
-		vehicle.setBrake(0, 0);
-		vehicle.setBrake(0, 1);
-		vehicle.setBrake(0, 2);
-		vehicle.setBrake(0, 3);
+	if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
+		// console.log("memory length", replayMemory.length);
+		return;
 	}
 
-	if (event.code === "KeyA" || event.code === "KeyD") {
-		vehicle.setSteeringValue(0, 0);
-		vehicle.setSteeringValue(0, 1);
+	const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
+
+	const currentStates = [];
+
+	const updatedQs = [];
+
+	miniBatch.forEach(([state, action, reward, nextState, done], index) => {
+		currentStates.push(state);
+
+		const x = tf.tensor2d(state, [1, 7]);
+		const currentQ = model.predict(x);
+
+		const newState = tf.tensor2d(nextState, [1, 7]);
+		const futureQ = model.predict(newState);
+
+		currentQ[action] = !done
+			? reward + DISCOUNT * futureQ.max().dataSync()
+			: reward;
+
+		updatedQs.push(currentQ.dataSync());
+
+		x.dispose();
+		newState.dispose();
+		currentQ.dispose();
+		futureQ.dispose();
+	});
+
+	const X = tf.tensor2d(currentStates);
+
+	const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, actionSet.length]);
+
+	process.stdout.clearLine();
+	process.stdout.cursorTo(0);
+	process.stdout.write(`epoch: ${epoch}`);
+
+	await model.fit(X, y, { verbose: false });
+	// console.log("trained!");
+
+	epoch++;
+
+	if (done) {
+		consoleMemory();
+		reset();
+		epoch = 0;
+		episode++;
 	}
-});
 
-const onResize = () => {
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
-
-	renderer.setSize(window.innerWidth, window.innerHeight);
+	X.dispose();
+	y.dispose();
 };
-window.addEventListener("resize", onResize);
 
-document.getElementById("reset").addEventListener("click", reset);
-
-const EPISODES = 100;
-
-const currentState = [
-	chassisBody.position.x / 50,
-	chassisBody.position.y / 50,
-	chassisBody.position.z / 50,
-	chassisBody.velocity.x / 17,
-	chassisBody.velocity.z / 17,
-	chassisBody.quaternion.x,
-	chassisBody.quaternion.z,
-];
-
-// while (true) {
-// 	const currentState = [
-// 		chassisBody.position.x / 50,
-// 		chassisBody.position.y / 50,
-// 		chassisBody.position.z / 50,
-// 		chassisBody.velocity.x / 17,
-// 		chassisBody.velocity.z / 17,
-// 		chassisBody.quaternion.x,
-// 		chassisBody.quaternion.z,
-// 	];
-
-// 	tf.tidy(() => {
-// 		const state = tf.tensor2d(currentState, [1, 7]);
-// 	});
-// }
+console.log("Begins training");
+while (true) {
+	await train();
+}

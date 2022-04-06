@@ -5,11 +5,7 @@ import CannonDebugger from "./vendor/cannon-es-debugger.js";
 
 // import model from "./model.js";
 
-const model = tf.sequential();
-model.add(tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" }));
-model.add(tf.layers.dense({ units: 20, activation: "relu" }));
-model.add(tf.layers.dense({ units: 8 }));
-model.compile({ optimizer: "adam", loss: "meanSquaredError" });
+const model = await tf.loadLayersModel(tf.io.browserFiles);
 
 //Initializing score
 let score = 0;

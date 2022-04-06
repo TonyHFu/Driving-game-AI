@@ -1,0 +1,5 @@
+v1: changes controls to left/right-forward/backward instead of left/right. epochs/ep = 2000
+v2: changes epochs/episode to 25000
+v3: changes original y to 1 (on ground)
+v4: changes epochs/ep to 3000 (to prevent local minima where car is tangent to target)
+v5: uses node without rendering
