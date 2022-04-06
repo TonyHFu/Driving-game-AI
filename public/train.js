@@ -598,26 +598,36 @@ const train = async function () {
 
 	miniBatch.forEach(([state, action, reward, nextState, done], index) => {
 		currentStates.push(state);
-		// actionIndices.push(action);
-		// rewards.push(reward);
-		// newCurrentStates.push(nextState);
-		// dones.push(done);
 
 		const x = tf.tensor2d(state, [1, 7]);
 		const currentQ = model.predict(x);
-		// currentQs.push(currentQ);
-		// states.push(x);
+
+		// console.log("batch", [state, action, reward, nextState, done]);
+		// console.log("x");
+		// x.print();
+		// console.log("currentQ");
+		// currentQ.print();
 
 		const newState = tf.tensor2d(nextState, [1, 7]);
 		const futureQ = model.predict(newState);
-		// futureQs.push(futureQ);
-		// newStates.push(newState);
 
-		currentQ[action] = !done
+		// console.log("newState");
+		// newState.print();
+		// console.log("futureQ");
+		// futureQ.print();
+
+		const currentQData = currentQ.dataSync();
+		// console.log("currentQData[action]", currentQData[action]);
+
+		currentQData[action] = !done
 			? reward + DISCOUNT * futureQ.max().dataSync()
 			: reward;
 
-		updatedQs.push(currentQ.dataSync());
+		// console.log("currentQData[action]", currentQData[action]);
+		// console.log("currentQ");
+		// currentQ.print();
+
+		updatedQs.push(currentQData);
 
 		x.dispose();
 		newState.dispose();

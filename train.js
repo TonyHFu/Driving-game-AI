@@ -238,21 +238,21 @@ const consoleMemory = () => {
 	}, 0);
 	const averageReward = sumRewards / size;
 	console.log(
-		`episode: ${episode} | avg_reward: ${averageReward} | completes: ${completes}`
+		`episode: ${episode} | avg_reward: ${averageReward} | completes: ${completes} | ending epsilon: ${epsilon}`
 	);
 };
 
 const train = async function () {
-	if (move < 1000) {
+	if (move < MIN_REPLAY_MEMORY_SIZE) {
 		process.stdout.clearLine();
 		process.stdout.cursorTo(0);
 		process.stdout.write(`move: ${move}`);
 	}
 
-	if (epoch >= 3000) {
+	if (epoch >= 25000) {
 		consoleMemory();
 		await model.save(
-			`file:///Users/tonyfu/threeJs/myGame/models/my-model-episode-${episode}-v5-nodejs`
+			`file:///Users/tonyfu/threeJs/myGame/models/v7/my-model-episode-${episode}-nodejs`
 		);
 		reset();
 		episode++;
@@ -425,7 +425,7 @@ const train = async function () {
 	if (epsilon !== MIN_EPSILON) {
 		epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
 	}
-
+	//MIN_REPLAY_MEMORY_SIZE
 	if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
 		// console.log("memory length", replayMemory.length);
 		return;
@@ -443,14 +443,32 @@ const train = async function () {
 		const x = tf.tensor2d(state, [1, 7]);
 		const currentQ = model.predict(x);
 
+		// console.log("batch", [state, action, reward, nextState, done]);
+		// console.log("x");
+		// x.print();
+		// console.log("currentQ");
+		// currentQ.print();
+
 		const newState = tf.tensor2d(nextState, [1, 7]);
 		const futureQ = model.predict(newState);
 
-		currentQ[action] = !done
+		// console.log("newState");
+		// newState.print();
+		// console.log("futureQ");
+		// futureQ.print();
+
+		const currentQData = currentQ.dataSync();
+		// console.log("currentQData[action]", currentQData[action]);
+
+		currentQData[action] = !done
 			? reward + DISCOUNT * futureQ.max().dataSync()
 			: reward;
 
-		updatedQs.push(currentQ.dataSync());
+		// console.log("currentQData[action]", currentQData[action]);
+		// console.log("currentQ");
+		// currentQ.print();
+
+		updatedQs.push(currentQData);
 
 		x.dispose();
 		newState.dispose();
@@ -466,6 +484,14 @@ const train = async function () {
 	process.stdout.cursorTo(0);
 	process.stdout.write(`epoch: ${epoch}`);
 
+	// console.log(miniBatch[0]);
+	// console.log("updatedQs", updatedQs);
+	// console.log(currentState);
+	// console.log(currentStates);
+
+	// X.print();
+	// y.print();
+
 	await model.fit(X, y, { verbose: false });
 	// console.log("trained!");
 
@@ -476,6 +502,7 @@ const train = async function () {
 		reset();
 		epoch = 0;
 		episode++;
+		epsilon = 0.5;
 	}
 
 	X.dispose();
@@ -483,6 +510,13 @@ const train = async function () {
 };
 
 console.log("Begins training");
+
+// let i = 0;
+// while (i < 100) {
+// 	await train();
+// 	i++;
+// }
+
 while (true) {
 	await train();
 }

@@ -3,10 +3,6 @@ import * as THREE from "./vendor/three.module.js";
 import * as CANNON from "./vendor/cannon-es.js";
 import CannonDebugger from "./vendor/cannon-es-debugger.js";
 
-// import model from "./model.js";
-
-const model = await tf.loadLayersModel(tf.io.browserFiles);
-
 //Initializing score
 let score = 0;
 // Initializing THREE JS
@@ -213,7 +209,9 @@ scene.add(marker);
 
 //adding marker to finish position
 const finishMarkerGeometry = new THREE.SphereGeometry(0.1, 32, 16);
-const finishMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const finishMarkerMaterial = new THREE.MeshBasicMaterial({
+	color: 0xff0000,
+});
 const finishMarker = new THREE.Mesh(finishMarkerGeometry, finishMarkerMaterial);
 finishMarker.position.copy(finish.position);
 scene.add(finishMarker);
@@ -382,266 +380,292 @@ function updatePhysics() {
 	marker.position.copy(chassisBody.position);
 }
 
-const EPISODES = 100;
-let epsilon = 0.5;
-const EPSILON_DECAY = 0.9999;
-const MIN_EPSILON = 0.01;
-const DISCOUNT = 0.99;
-const MIN_REPLAY_MEMORY_SIZE = 1000;
-const MINIBATCH_SIZE = 10;
-const REPLAY_MEMORY_SIZE = 50000;
-let epoch = 1;
-let episode = 1;
+document
+	.getElementById("model_submit")
+	.addEventListener("click", async function (event) {
+		const uploadJSONInput = document.getElementById("upload-json");
+		const uploadWeightsInput = document.getElementById("upload-weights");
 
-// import * as tf from "@tensorflow/tfjs-node";
+		const model = await tf.loadLayersModel(
+			tf.io.browserFiles([
+				uploadJSONInput.files[0],
+				uploadWeightsInput.files[0],
+			])
+		);
 
-const replayMemory = [];
-
-const train = async function () {
-	if (epoch >= 3000) {
-		await model.save(`downloads://my-model-episode-${episode}-v4`);
 		reset();
-		episode++;
-		epoch = 1;
-		epsilon = 0.5;
-	}
 
-	const currentState = [
-		chassisBody.position.x / 50,
-		chassisBody.position.y / 50,
-		chassisBody.position.z / 50,
-		chassisBody.velocity.x / 17,
-		chassisBody.velocity.z / 17,
-		chassisBody.quaternion.x,
-		chassisBody.quaternion.z,
-	];
+		const EPISODES = 100;
+		let epsilon = 0.5;
+		const EPSILON_DECAY = 0.9999;
+		const MIN_EPSILON = 0.01;
+		const DISCOUNT = 0.99;
+		const MIN_REPLAY_MEMORY_SIZE = 1000;
+		const MINIBATCH_SIZE = 10;
+		const REPLAY_MEMORY_SIZE = 50000;
+		let epoch = 1;
+		let episode = 1;
+		let move = 1;
 
-	const state = tf.tensor2d(currentState, [1, currentState.length]);
+		// import * as tf from "@tensorflow/tfjs-node";
 
-	const actionSet = [
-		// "left",
-		// "right",
-		"left-forward",
-		"left-backward",
-		"right-forward",
-		"right-backward",
-		"forward",
-		"backward",
-		"brake",
-		"nothing",
-	];
+		const replayMemory = [];
 
-	// console.log(currentState);
-	// state.print();
-	// console.log(state);
-	let useNetwork = true;
-	if (Math.random() < epsilon) {
-		useNetwork = false;
-		console.log(`making random move (epsilon = ${epsilon})`);
-	}
+		const train = async function () {
+			console.log("move:", move);
+			// if (epoch >= 3000) {
+			// 	await model.save(`downloads://my-model-episode-${episode}-v4`);
+			// 	reset();
+			// 	episode++;
+			// 	epoch = 1;
+			// 	epsilon = 0.5;
+			// }
 
-	const preds = model.predict(state);
-	state.dispose();
+			const currentState = [
+				chassisBody.position.x / 50,
+				chassisBody.position.y / 50,
+				chassisBody.position.z / 50,
+				chassisBody.velocity.x / 17,
+				chassisBody.velocity.z / 17,
+				chassisBody.quaternion.x,
+				chassisBody.quaternion.z,
+			];
 
-	const predsArr = preds.dataSync();
-	// console.log("preds");
-	// preds.print();
-	preds.dispose();
+			const state = tf.tensor2d(currentState, [1, currentState.length]);
 
-	const actionIndex = useNetwork
-		? predsArr.indexOf(Math.max(...predsArr))
-		: Math.floor(Math.random() * 6);
+			const actionSet = [
+				// "left",
+				// "right",
+				"left-forward",
+				"left-backward",
+				"right-forward",
+				"right-backward",
+				"forward",
+				"backward",
+				"brake",
+				"nothing",
+			];
 
-	const action = actionSet[actionIndex];
-	console.log("action", action);
+			// console.log(currentState);
+			// state.print();
+			// console.log(state);
 
-	switch (action) {
-		// case "left":
-		// 	vehicle.setSteeringValue(0.5, 0);
-		// 	vehicle.setSteeringValue(0.5, 1);
-		// 	break;
-		// case "right":
-		// 	vehicle.setSteeringValue(-0.5, 0);
-		// 	vehicle.setSteeringValue(-0.5, 1);
-		// 	break;
-		case "left-forward":
-			vehicle.setSteeringValue(0.5, 0);
-			vehicle.setSteeringValue(0.5, 1);
-			vehicle.applyEngineForce(500, 0);
-			vehicle.applyEngineForce(500, 1);
-			vehicle.applyEngineForce(500, 2);
-			vehicle.applyEngineForce(500, 3);
-			break;
-		case "right-forward":
-			vehicle.setSteeringValue(-0.5, 0);
-			vehicle.setSteeringValue(-0.5, 1);
-			vehicle.applyEngineForce(500, 0);
-			vehicle.applyEngineForce(500, 1);
-			vehicle.applyEngineForce(500, 2);
-			vehicle.applyEngineForce(500, 3);
-			break;
-		case "left-backward":
-			vehicle.setSteeringValue(0.5, 0);
-			vehicle.setSteeringValue(0.5, 1);
-			vehicle.applyEngineForce(-500, 0);
-			vehicle.applyEngineForce(-500, 1);
-			vehicle.applyEngineForce(-500, 2);
-			vehicle.applyEngineForce(-500, 3);
-			break;
-		case "right-backward":
-			vehicle.setSteeringValue(-0.5, 0);
-			vehicle.setSteeringValue(-0.5, 1);
-			vehicle.applyEngineForce(-500, 0);
-			vehicle.applyEngineForce(-500, 1);
-			vehicle.applyEngineForce(-500, 2);
-			vehicle.applyEngineForce(-500, 3);
-			break;
-		case "forward":
-			vehicle.setSteeringValue(0, 0);
-			vehicle.setSteeringValue(0, 1);
-			vehicle.applyEngineForce(500, 0);
-			vehicle.applyEngineForce(500, 1);
-			vehicle.applyEngineForce(500, 2);
-			vehicle.applyEngineForce(500, 3);
-			break;
-		case "backward":
-			vehicle.setSteeringValue(0, 0);
-			vehicle.setSteeringValue(0, 1);
-			vehicle.applyEngineForce(-500, 0);
-			vehicle.applyEngineForce(-500, 1);
-			vehicle.applyEngineForce(-500, 2);
-			vehicle.applyEngineForce(-500, 3);
-			break;
-		case "brake":
-			vehicle.setBrake(50, 0);
-			vehicle.setBrake(50, 1);
-			vehicle.setBrake(50, 2);
-			vehicle.setBrake(50, 3);
-			break;
-		case "nothing":
-			vehicle.applyEngineForce(0, 0);
-			vehicle.applyEngineForce(0, 1);
-			vehicle.applyEngineForce(0, 2);
-			vehicle.applyEngineForce(0, 3);
-			vehicle.setBrake(0, 0);
-			vehicle.setBrake(0, 1);
-			vehicle.setBrake(0, 2);
-			vehicle.setBrake(0, 3);
-			vehicle.setSteeringValue(0, 0);
-			vehicle.setSteeringValue(0, 1);
-			break;
-	}
+			// let useNetwork = true;
+			// if (Math.random() < epsilon) {
+			// 	useNetwork = false;
+			// 	console.log(`making random move (epsilon = ${epsilon})`);
+			// }
 
-	updatePhysics();
+			const preds = model.predict(state);
+			state.dispose();
 
-	let done = false;
+			const predsArr = preds.dataSync();
+			// console.log("preds");
+			// preds.print();
+			preds.dispose();
 
-	let reward = (142 - chassisBody.position.distanceTo(finish.position)) / 200;
+			const actionIndex = predsArr.indexOf(Math.max(...predsArr));
 
-	if (chassisBody.position.distanceTo(finish.position) < 1.3) {
-		reward = 1;
-		done = true;
-		score++;
-		document.getElementById("score").innerHTML = score;
-	}
+			const action = actionSet[actionIndex];
+			console.log("action", action);
 
-	console.log("distance", chassisBody.position.distanceTo(finish.position));
-	console.log("reward", reward);
+			switch (action) {
+				// case "left":
+				// 	vehicle.setSteeringValue(0.5, 0);
+				// 	vehicle.setSteeringValue(0.5, 1);
+				// 	break;
+				// case "right":
+				// 	vehicle.setSteeringValue(-0.5, 0);
+				// 	vehicle.setSteeringValue(-0.5, 1);
+				// 	break;
+				case "left-forward":
+					vehicle.setSteeringValue(0.5, 0);
+					vehicle.setSteeringValue(0.5, 1);
+					vehicle.applyEngineForce(500, 0);
+					vehicle.applyEngineForce(500, 1);
+					vehicle.applyEngineForce(500, 2);
+					vehicle.applyEngineForce(500, 3);
+					break;
+				case "right-forward":
+					vehicle.setSteeringValue(-0.5, 0);
+					vehicle.setSteeringValue(-0.5, 1);
+					vehicle.applyEngineForce(500, 0);
+					vehicle.applyEngineForce(500, 1);
+					vehicle.applyEngineForce(500, 2);
+					vehicle.applyEngineForce(500, 3);
+					break;
+				case "left-backward":
+					vehicle.setSteeringValue(0.5, 0);
+					vehicle.setSteeringValue(0.5, 1);
+					vehicle.applyEngineForce(-500, 0);
+					vehicle.applyEngineForce(-500, 1);
+					vehicle.applyEngineForce(-500, 2);
+					vehicle.applyEngineForce(-500, 3);
+					break;
+				case "right-backward":
+					vehicle.setSteeringValue(-0.5, 0);
+					vehicle.setSteeringValue(-0.5, 1);
+					vehicle.applyEngineForce(-500, 0);
+					vehicle.applyEngineForce(-500, 1);
+					vehicle.applyEngineForce(-500, 2);
+					vehicle.applyEngineForce(-500, 3);
+					break;
+				case "forward":
+					vehicle.setSteeringValue(0, 0);
+					vehicle.setSteeringValue(0, 1);
+					vehicle.applyEngineForce(500, 0);
+					vehicle.applyEngineForce(500, 1);
+					vehicle.applyEngineForce(500, 2);
+					vehicle.applyEngineForce(500, 3);
+					break;
+				case "backward":
+					vehicle.setSteeringValue(0, 0);
+					vehicle.setSteeringValue(0, 1);
+					vehicle.applyEngineForce(-500, 0);
+					vehicle.applyEngineForce(-500, 1);
+					vehicle.applyEngineForce(-500, 2);
+					vehicle.applyEngineForce(-500, 3);
+					break;
+				case "brake":
+					vehicle.setBrake(50, 0);
+					vehicle.setBrake(50, 1);
+					vehicle.setBrake(50, 2);
+					vehicle.setBrake(50, 3);
+					break;
+				case "nothing":
+					vehicle.applyEngineForce(0, 0);
+					vehicle.applyEngineForce(0, 1);
+					vehicle.applyEngineForce(0, 2);
+					vehicle.applyEngineForce(0, 3);
+					vehicle.setBrake(0, 0);
+					vehicle.setBrake(0, 1);
+					vehicle.setBrake(0, 2);
+					vehicle.setBrake(0, 3);
+					vehicle.setSteeringValue(0, 0);
+					vehicle.setSteeringValue(0, 1);
+					break;
+			}
 
-	const newCurrentState = [
-		chassisBody.position.x / 50,
-		chassisBody.position.y / 50,
-		chassisBody.position.z / 50,
-		chassisBody.velocity.x / 17,
-		chassisBody.velocity.z / 17,
-		chassisBody.quaternion.x,
-		chassisBody.quaternion.z,
-	];
+			updatePhysics();
 
-	if (done) {
-		reset();
-	}
+			let done = false;
 
-	if (replayMemory.length >= REPLAY_MEMORY_SIZE) {
-		replayMemory.shift();
-	}
+			let reward =
+				(142 - chassisBody.position.distanceTo(finish.position)) / 200;
 
-	replayMemory.push([currentState, actionIndex, reward, newCurrentState, done]);
+			if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+				reward = 1;
+				done = true;
+				score++;
+				document.getElementById("score").innerHTML = score;
+			}
 
-	// console.log("memory length", replayMemory.length);
+			console.log("distance", chassisBody.position.distanceTo(finish.position));
+			console.log("reward", reward);
 
-	if (epsilon !== MIN_EPSILON) {
-		epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
-	}
+			// const newCurrentState = [
+			// 	chassisBody.position.x / 50,
+			// 	chassisBody.position.y / 50,
+			// 	chassisBody.position.z / 50,
+			// 	chassisBody.velocity.x / 17,
+			// 	chassisBody.velocity.z / 17,
+			// 	chassisBody.quaternion.x,
+			// 	chassisBody.quaternion.z,
+			// ];
 
-	if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
-		// console.log("memory length", replayMemory.length);
-		return;
-	}
+			if (done) {
+				reset();
+			}
 
-	const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
+			move++;
 
-	const currentStates = [];
-	// const actionIndices = [];
-	// const rewards = [];
-	// const newCurrentStates = [];
-	// const dones = [];
-	// const states = [];
-	// const newStates = [];
-	// const currentQs = [];
-	// const futureQs = [];
-	const updatedQs = [];
+			// if (replayMemory.length >= REPLAY_MEMORY_SIZE) {
+			// 	replayMemory.shift();
+			// }
 
-	miniBatch.forEach(([state, action, reward, nextState, done], index) => {
-		currentStates.push(state);
-		// actionIndices.push(action);
-		// rewards.push(reward);
-		// newCurrentStates.push(nextState);
-		// dones.push(done);
+			// replayMemory.push([
+			// 	currentState,
+			// 	actionIndex,
+			// 	reward,
+			// 	newCurrentState,
+			// 	done,
+			// ]);
 
-		const x = tf.tensor2d(state, [1, 7]);
-		const currentQ = model.predict(x);
-		// currentQs.push(currentQ);
-		// states.push(x);
+			// // console.log("memory length", replayMemory.length);
 
-		const newState = tf.tensor2d(nextState, [1, 7]);
-		const futureQ = model.predict(newState);
-		// futureQs.push(futureQ);
-		// newStates.push(newState);
+			// if (epsilon !== MIN_EPSILON) {
+			// 	epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
+			// }
 
-		currentQ[action] = !done
-			? reward + DISCOUNT * futureQ.max().dataSync()
-			: reward;
+			// if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
+			// 	// console.log("memory length", replayMemory.length);
+			// 	return;
+			// }
 
-		updatedQs.push(currentQ.dataSync());
+			// const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
 
-		x.dispose();
-		newState.dispose();
-		currentQ.dispose();
-		futureQ.dispose();
+			// const currentStates = [];
+			// // const actionIndices = [];
+			// // const rewards = [];
+			// // const newCurrentStates = [];
+			// // const dones = [];
+			// // const states = [];
+			// // const newStates = [];
+			// // const currentQs = [];
+			// // const futureQs = [];
+			// const updatedQs = [];
+
+			// miniBatch.forEach(([state, action, reward, nextState, done], index) => {
+			// 	currentStates.push(state);
+			// 	// actionIndices.push(action);
+			// 	// rewards.push(reward);
+			// 	// newCurrentStates.push(nextState);
+			// 	// dones.push(done);
+
+			// 	const x = tf.tensor2d(state, [1, 7]);
+			// 	const currentQ = model.predict(x);
+			// 	// currentQs.push(currentQ);
+			// 	// states.push(x);
+
+			// 	const newState = tf.tensor2d(nextState, [1, 7]);
+			// 	const futureQ = model.predict(newState);
+			// 	// futureQs.push(futureQ);
+			// 	// newStates.push(newState);
+
+			// 	currentQ[action] = !done
+			// 		? reward + DISCOUNT * futureQ.max().dataSync()
+			// 		: reward;
+
+			// 	updatedQs.push(currentQ.dataSync());
+
+			// 	x.dispose();
+			// 	newState.dispose();
+			// 	currentQ.dispose();
+			// 	futureQ.dispose();
+			// });
+
+			// const X = tf.tensor2d(currentStates);
+
+			// const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, actionSet.length]);
+
+			// console.log("epoch:", epoch);
+
+			// await model.fit(X, y);
+			// console.log("trained!");
+
+			// epoch++;
+
+			// X.dispose();
+			// y.dispose();
+		};
+
+		async function animate() {
+			await train();
+			// console.log("trained!");
+			requestAnimationFrame(animate);
+			// updatePhysics();
+			debugRenderer.update();
+			renderer.render(scene, camera);
+		}
+		animate();
 	});
-
-	const X = tf.tensor2d(currentStates);
-
-	const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, actionSet.length]);
-
-	console.log("epoch:", epoch);
-
-	await model.fit(X, y);
-	console.log("trained!");
-
-	epoch++;
-
-	X.dispose();
-	y.dispose();
-};
-
-async function animate() {
-	await train();
-	// console.log("trained!");
-	requestAnimationFrame(animate);
-	// updatePhysics();
-	debugRenderer.update();
-	renderer.render(scene, camera);
-}
-animate();
