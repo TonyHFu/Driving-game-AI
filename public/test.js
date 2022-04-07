@@ -93,7 +93,8 @@ const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
 const chassisBody = new CANNON.Body({ mass: 150, linearDamping: 0.5 });
 chassisBody.addShape(chassisShape);
 chassisBody.position.set(0, 1, 0);
-chassisBody.angularVelocity.set(0, 0.5, 0);
+chassisBody.quaternion.set(0, 0, 0, 1);
+chassisBody.angularVelocity.set(0, 0, 0);
 
 //giving chassisBody a 3mesh to deal with following camera
 
@@ -266,7 +267,7 @@ renderer.render(scene, camera);
 const reset = () => {
 	chassisBody.position.set(0, 1, 0);
 	chassisBody.quaternion.set(0, 0, 0, 1);
-	chassisBody.angularVelocity.set(0, 0.5, 0);
+	chassisBody.angularVelocity.set(0, 0, 0);
 	chassisBody.velocity.setZero();
 
 	vehicle.applyEngineForce(0, 0);

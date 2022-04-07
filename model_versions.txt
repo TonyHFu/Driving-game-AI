@@ -4,3 +4,13 @@ v3: changes original y to 1 (on ground)
 v4: changes epochs/ep to 3000 (to prevent local minima where car is tangent to target)
 v5: uses node without rendering
 v6: uses node with e/e of 25000
+v7: FIXES Q not updating bug!!!!!!
+v8: fixes document not in node bug (means v7 episode 2 actually finished it!)
+v9: makes save model on complete (first ep got overwrote by v10)
+v10: makes epsilon decay 0.999
+v11: puts epsilon to 0.9995, discount to 0.9
+v12: implements target model and update frequency 100, epsilon start 0.5, decay 0.9999, discount 0.99, minibatch size 100
+v13: resets in random position within 20 x and 20 z
+v14: fixes major bug where reward is in positive feedback because of Bellman equation with gradiented reward (removes Bellman discount term)
+and epsilon does not restart after done and episode
+v15: resets back in 0, 1, 0

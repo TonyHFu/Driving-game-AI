@@ -12,6 +12,14 @@ model.add(tf.layers.dense({ units: 20, activation: "relu" }));
 model.add(tf.layers.dense({ units: 8 }));
 model.compile({ optimizer: "adam", loss: "meanSquaredError" });
 
+const targetModel = tf.sequential();
+targetModel.add(
+	tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" })
+);
+targetModel.add(tf.layers.dense({ units: 20, activation: "relu" }));
+targetModel.add(tf.layers.dense({ units: 8 }));
+targetModel.compile({ optimizer: "adam", loss: "meanSquaredError" });
+targetModel.setWeights(model.getWeights());
 //Initializing score
 let score = 0;
 
@@ -58,7 +66,8 @@ const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.5, 2));
 const chassisBody = new CANNON.Body({ mass: 150, linearDamping: 0.5 });
 chassisBody.addShape(chassisShape);
 chassisBody.position.set(0, 1, 0);
-chassisBody.angularVelocity.set(0, 0.5, 0);
+chassisBody.quaternion.set(0, 0, 0, 1);
+chassisBody.angularVelocity.set(0, 0, 0);
 
 world.addBody(chassisBody);
 
@@ -184,9 +193,16 @@ hfBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 world.addBody(hfBody);
 
 const reset = () => {
+	// const xSign = Math.round(Math.random()) ? 1 : -1;
+	// const zSign = Math.round(Math.random()) ? 1 : -1;
+
+	// const xPosition = Math.random() * 20 * xSign;
+	// const zPosition = Math.random() * 20 * zSign;
+
+	// chassisBody.position.set(xPosition, 1, zPosition);
 	chassisBody.position.set(0, 1, 0);
 	chassisBody.quaternion.set(0, 0, 0, 1);
-	chassisBody.angularVelocity.set(0, 0.5, 0);
+	chassisBody.angularVelocity.set(0, 0, 0);
 	chassisBody.velocity.setZero();
 
 	vehicle.applyEngineForce(0, 0);
@@ -211,20 +227,24 @@ function updatePhysics() {
 }
 
 const EPISODES = 100;
-let epsilon = 0.5;
+const EPSILON_START = 0.5;
 const EPSILON_DECAY = 0.9999;
 const MIN_EPSILON = 0.01;
 const DISCOUNT = 0.99;
 const MIN_REPLAY_MEMORY_SIZE = 1000;
-const MINIBATCH_SIZE = 10;
+const MINIBATCH_SIZE = 100;
 const REPLAY_MEMORY_SIZE = 50000;
+const EPISODE_LENGTH = 5000;
+const UPDATE_FREQUENCY = 100;
+
+let epsilon = EPSILON_START;
 let epoch = 1;
 let episode = 1;
 let move = 1;
 
 const replayMemory = [];
 
-const consoleMemory = () => {
+async function consoleMemory() {
 	const size = replayMemory.length >= 3000 ? 3000 : replayMemory.length;
 	const sumRewards = replayMemory.slice(-1 * size).reduce((acc, memory) => {
 		acc += memory[2];
@@ -238,26 +258,33 @@ const consoleMemory = () => {
 	}, 0);
 	const averageReward = sumRewards / size;
 	console.log(
-		`episode: ${episode} | avg_reward: ${averageReward} | completes: ${completes} | ending epsilon: ${epsilon}`
+		`\nepisode: ${episode} | avg_reward: ${averageReward} | completes: ${completes} | ending epsilon: ${epsilon}`
 	);
-};
+	await model.save(
+		`file:///Users/tonyfu/threeJs/myGame/models/v15/my-model-episode-${episode}-nodejs`
+	);
+}
 
 const train = async function () {
+	if (epoch % UPDATE_FREQUENCY === 0) {
+		// console.log("model updated");
+		model.setWeights(targetModel.getWeights());
+	}
+
 	if (move < MIN_REPLAY_MEMORY_SIZE) {
 		process.stdout.clearLine();
 		process.stdout.cursorTo(0);
 		process.stdout.write(`move: ${move}`);
 	}
 
-	if (epoch >= 25000) {
-		consoleMemory();
-		await model.save(
-			`file:///Users/tonyfu/threeJs/myGame/models/v7/my-model-episode-${episode}-nodejs`
-		);
+	if (epoch >= EPISODE_LENGTH) {
+		await consoleMemory();
 		reset();
 		episode++;
 		epoch = 1;
-		epsilon = 0.5;
+		// epsilon = EPSILON_START;
+		// console.log("model updated");
+		model.setWeights(targetModel.getWeights());
 	}
 
 	const currentState = [
@@ -398,7 +425,7 @@ const train = async function () {
 		reward = 1;
 		done = true;
 		score++;
-		document.getElementById("score").innerHTML = score;
+		console.log("finished!");
 	}
 
 	// console.log("distance", chassisBody.position.distanceTo(finishPosition));
@@ -443,37 +470,23 @@ const train = async function () {
 		const x = tf.tensor2d(state, [1, 7]);
 		const currentQ = model.predict(x);
 
-		// console.log("batch", [state, action, reward, nextState, done]);
-		// console.log("x");
-		// x.print();
-		// console.log("currentQ");
-		// currentQ.print();
-
-		const newState = tf.tensor2d(nextState, [1, 7]);
-		const futureQ = model.predict(newState);
-
-		// console.log("newState");
-		// newState.print();
-		// console.log("futureQ");
-		// futureQ.print();
+		// const newState = tf.tensor2d(nextState, [1, 7]);
+		// const futureQ = targetModel.predict(newState);
 
 		const currentQData = currentQ.dataSync();
-		// console.log("currentQData[action]", currentQData[action]);
 
-		currentQData[action] = !done
-			? reward + DISCOUNT * futureQ.max().dataSync()
-			: reward;
+		// currentQData[action] = !done
+		// 	? reward + DISCOUNT * futureQ.max().dataSync()
+		// 	: reward;
 
-		// console.log("currentQData[action]", currentQData[action]);
-		// console.log("currentQ");
-		// currentQ.print();
+		currentQData[action] = reward;
 
 		updatedQs.push(currentQData);
 
 		x.dispose();
-		newState.dispose();
+		// newState.dispose();
 		currentQ.dispose();
-		futureQ.dispose();
+		// futureQ.dispose();
 	});
 
 	const X = tf.tensor2d(currentStates);
@@ -482,7 +495,9 @@ const train = async function () {
 
 	process.stdout.clearLine();
 	process.stdout.cursorTo(0);
-	process.stdout.write(`epoch: ${epoch}`);
+	process.stdout.write(
+		`epoch: ${epoch} | reward: ${reward} | epsilon: ${epsilon}`
+	);
 
 	// console.log(miniBatch[0]);
 	// console.log("updatedQs", updatedQs);
@@ -492,17 +507,19 @@ const train = async function () {
 	// X.print();
 	// y.print();
 
-	await model.fit(X, y, { verbose: false });
+	await targetModel.fit(X, y, { verbose: false });
 	// console.log("trained!");
 
 	epoch++;
 
 	if (done) {
-		consoleMemory();
+		await consoleMemory();
 		reset();
 		epoch = 0;
 		episode++;
-		epsilon = 0.5;
+		// epsilon = EPSILON_START;
+		// console.log("model updated");
+		model.setWeights(targetModel.getWeights());
 	}
 
 	X.dispose();
