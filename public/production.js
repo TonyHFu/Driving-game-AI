@@ -476,7 +476,13 @@ document
 	});
 
 //For production server on netlify
-document.getElementById("load-model").addEventListener("click", async event => {
+
+let reqAnimationFrame;
+
+const handleLoadModel = async event => {
+	document.removeEventListener("keydown", handleKeyDown);
+	document.removeEventListener("keyup", handleKeyUp);
+
 	const model = await tf.loadLayersModel("/public/model/model.json");
 	reset();
 
@@ -626,9 +632,82 @@ document.getElementById("load-model").addEventListener("click", async event => {
 
 	async function animate() {
 		await train();
-		requestAnimationFrame(animate);
+		reqAnimationFrame = requestAnimationFrame(animate);
 		debugRenderer.update();
 		renderer.render(scene, camera);
 	}
 	animate();
+};
+
+document
+	.getElementById("load-model")
+	.addEventListener("click", handleLoadModel);
+
+const handleKeyDown = event => {
+	// console.log(event.code);
+	if (event.code === "KeyW") {
+		vehicle.applyEngineForce(500, 0);
+		vehicle.applyEngineForce(500, 1);
+		vehicle.applyEngineForce(500, 2);
+		vehicle.applyEngineForce(500, 3);
+	}
+	if (event.code === "KeyS") {
+		vehicle.applyEngineForce(-500, 0);
+		vehicle.applyEngineForce(-500, 1);
+		vehicle.applyEngineForce(-500, 2);
+		vehicle.applyEngineForce(-500, 3);
+	}
+
+	if (event.code === "KeyA") {
+		vehicle.setSteeringValue(0.5, 0);
+		vehicle.setSteeringValue(0.5, 1);
+	}
+	if (event.code === "KeyD") {
+		vehicle.setSteeringValue(-0.5, 0);
+		vehicle.setSteeringValue(-0.5, 1);
+	}
+
+	if (event.code === "KeyQ") {
+		vehicle.setBrake(50, 0);
+		vehicle.setBrake(50, 1);
+		vehicle.setBrake(50, 2);
+		vehicle.setBrake(50, 3);
+	}
+};
+
+const handleKeyUp = event => {
+	// console.log("key up");
+
+	if (event.code === "KeyW") {
+		vehicle.applyEngineForce(0, 0);
+		vehicle.applyEngineForce(0, 1);
+		vehicle.applyEngineForce(0, 2);
+		vehicle.applyEngineForce(0, 3);
+	}
+	if (event.code === "KeyS") {
+		vehicle.applyEngineForce(0, 0);
+		vehicle.applyEngineForce(0, 1);
+		vehicle.applyEngineForce(0, 2);
+		vehicle.applyEngineForce(0, 3);
+	}
+
+	if (event.code === "KeyQ") {
+		vehicle.setBrake(0, 0);
+		vehicle.setBrake(0, 1);
+		vehicle.setBrake(0, 2);
+		vehicle.setBrake(0, 3);
+	}
+
+	if (event.code === "KeyA" || event.code === "KeyD") {
+		vehicle.setSteeringValue(0, 0);
+		vehicle.setSteeringValue(0, 1);
+	}
+};
+
+document.getElementById("play").addEventListener("click", event => {
+	cancelAnimationFrame(reqAnimationFrame);
+
+	document.addEventListener("keydown", handleKeyDown);
+
+	document.addEventListener("keyup", handleKeyUp);
 });

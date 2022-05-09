@@ -10,12 +10,9 @@
 	<body>
 		<button id="reset">Reset</button>
 		<div id="score">0</div>
-		<label for="JSON">Upload JSON</label>
-		<input type="file" id="upload-json" name="JSON"></input>
-		<label for="weights">Upload Weights</label>
-		<input type="file" id="upload-weights" name="weights"></input>
-		<button id="model_submit">Submit</button>
-		<button id="load-model">Load Model</button>
+		<button id="play">Play yourself</button>
+		<button id="load-model">Let AI drive</button>
+		<button id="train">See training in browser</button>
 		<script type="module" src="/public/vendor/three.module.js"></script>
 		<script type="module" src="/public/vendor/cannon-es.js"></script>
 		<script type="module" src="/public/vendor/cannon-es-debugger.js"></script>
@@ -28,6 +25,6 @@
 		></script>
 		<!-- <script type="module" src="./main.js"></script> -->
 		<!-- <script type="module" src="./train.js"></script> -->
-		<script type="module" src="/public/test.js"></script>
+		<script type="module" src="/public/production.js"></script>
 	</body>
 </html>
