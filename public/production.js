@@ -568,6 +568,13 @@ document.getElementById("play").addEventListener("click", event => {
 let reqAnimationFrameTrain;
 
 const handleTrain = async event => {
+	document.removeEventListener("keydown", handleKeyDown);
+	document.removeEventListener("keyup", handleKeyUp);
+	cancelAnimationFrame(reqAnimationFramePlay);
+	cancelAnimationFrame(reqAnimationFrameModel);
+	cancelAnimationFrame(reqAnimationFrameTrain);
+	reset();
+
 	const EPISODES = 100;
 	let epsilon = 0.5;
 	const EPSILON_DECAY = 0.9999;
@@ -578,17 +585,9 @@ const handleTrain = async event => {
 	const REPLAY_MEMORY_SIZE = 50000;
 	let epoch = 1;
 	let episode = 1;
+	const replayMemory = [];
 
 	const train = async function () {
-		document.removeEventListener("keydown", handleKeyDown);
-		document.removeEventListener("keyup", handleKeyUp);
-		cancelAnimationFrame(reqAnimationFramePlay);
-		cancelAnimationFrame(reqAnimationFrameModel);
-		cancelAnimationFrame(reqAnimationFrameTrain);
-
-		reset();
-		const replayMemory = [];
-
 		const model = tf.sequential();
 		model.add(
 			tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" })
