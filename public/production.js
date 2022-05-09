@@ -312,9 +312,10 @@ let reqAnimationFrameModel;
 const handleLoadModel = async event => {
 	document.removeEventListener("keydown", handleKeyDown);
 	document.removeEventListener("keyup", handleKeyUp);
+	cancelAnimationFrame(reqAnimationFramePlay);
+	reset();
 
 	const model = await tf.loadLayersModel("/public/model/model.json");
-	reset();
 
 	const EPISODES = 100;
 	let epsilon = 0.5;
@@ -536,7 +537,7 @@ const handleKeyUp = event => {
 
 let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
-	// cancelAnimationFrame(reqAnimationFrameModel);
+	cancelAnimationFrame(reqAnimationFrameModel);
 	reset();
 	document.addEventListener("keydown", handleKeyDown);
 
