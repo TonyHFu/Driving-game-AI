@@ -739,7 +739,7 @@ const handleTrain = async event => {
 			reward = 1;
 			done = true;
 			score++;
-			document.getElementById("score").innerHTML = score;
+			document.getElementById("score").innerHTML = "Score: " + score;
 		}
 
 		console.log("distance", chassisBody.position.distanceTo(finish.position));
