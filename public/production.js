@@ -307,7 +307,7 @@ function updatePhysics() {
 
 //For production server on netlify
 
-let reqAnimationFrame;
+let reqAnimationFrameModel;
 
 const handleLoadModel = async event => {
 	document.removeEventListener("keydown", handleKeyDown);
@@ -462,7 +462,7 @@ const handleLoadModel = async event => {
 
 	async function animate() {
 		await train();
-		reqAnimationFrame = requestAnimationFrame(animate);
+		reqAnimationFrameModel = requestAnimationFrame(animate);
 		debugRenderer.update();
 		renderer.render(scene, camera);
 	}
@@ -534,10 +534,25 @@ const handleKeyUp = event => {
 	}
 };
 
+let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
-	cancelAnimationFrame(reqAnimationFrame);
+	cancelAnimationFrame(reqAnimationFrameModel);
 
 	document.addEventListener("keydown", handleKeyDown);
 
 	document.addEventListener("keyup", handleKeyUp);
+
+	function animate() {
+		if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+			reset();
+			score++;
+			document.getElementById("score").innerHTML = score;
+		}
+		reqAnimationFramePlay = requestAnimationFrame(animate);
+		updatePhysics();
+		debugRenderer.update();
+		renderer.render(scene, camera);
+	}
+
+	animate();
 });
