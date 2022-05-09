@@ -536,8 +536,8 @@ const handleKeyUp = event => {
 
 let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
-	cancelAnimationFrame(reqAnimationFrameModel);
-
+	// cancelAnimationFrame(reqAnimationFrameModel);
+	reset();
 	document.addEventListener("keydown", handleKeyDown);
 
 	document.addEventListener("keyup", handleKeyUp);
