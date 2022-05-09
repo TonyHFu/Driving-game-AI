@@ -451,7 +451,7 @@ const handleLoadModel = async event => {
 			reward = 1;
 			done = true;
 			score++;
-			document.getElementById("score").innerHTML = score;
+			document.getElementById("score").innerHTML = "Score: " + score;
 		}
 
 		console.log("distance", chassisBody.position.distanceTo(finish.position));
@@ -552,7 +552,7 @@ document.getElementById("play").addEventListener("click", event => {
 		if (chassisBody.position.distanceTo(finish.position) < 1.3) {
 			reset();
 			score++;
-			document.getElementById("score").innerHTML = score;
+			document.getElementById("score").innerHTML = "Score: " + score;
 		}
 		reqAnimationFramePlay = requestAnimationFrame(animate);
 		updatePhysics();
