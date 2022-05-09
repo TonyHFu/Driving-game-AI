@@ -578,6 +578,8 @@ const handleTrain = async event => {
 	let episode = 1;
 
 	const train = async function () {
+		const replayMemory = [];
+
 		const model = tf.sequential();
 		model.add(
 			tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" })
