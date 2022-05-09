@@ -563,6 +563,8 @@ document.getElementById("play").addEventListener("click", event => {
 
 //Train
 
+let reqAnimationFrameTrain;
+
 const handleTrain = async event => {
 	const EPISODES = 100;
 	let epsilon = 0.5;
@@ -576,6 +578,13 @@ const handleTrain = async event => {
 	let episode = 1;
 
 	const train = async function () {
+		const model = tf.sequential();
+		model.add(
+			tf.layers.dense({ inputShape: [7], units: 20, activation: "relu" })
+		);
+		model.add(tf.layers.dense({ units: 20, activation: "relu" }));
+		model.add(tf.layers.dense({ units: 8 }));
+		model.compile({ optimizer: "adam", loss: "meanSquaredError" });
 		if (epoch >= 30000000) {
 			// await model.save(`downloads://my-model-episode-${episode}-v4`);
 			reset();
@@ -833,7 +842,7 @@ const handleTrain = async event => {
 	async function animate() {
 		await train();
 		// console.log("trained!");
-		requestAnimationFrame(animate);
+		reqAnimationFrameTrain = requestAnimationFrame(animate);
 		// updatePhysics();
 		debugRenderer.update();
 		renderer.render(scene, camera);
