@@ -333,7 +333,7 @@ const handleLoadModel = async event => {
 
 	const replayMemory = [];
 
-	const train = async function () {
+	const modelDrive = async function () {
 		console.log("move:", move);
 
 		const currentState = [
@@ -464,7 +464,7 @@ const handleLoadModel = async event => {
 	};
 
 	async function animate() {
-		await train();
+		await modelDrive();
 		reqAnimationFrameModel = requestAnimationFrame(animate);
 		debugRenderer.update();
 		renderer.render(scene, camera);
@@ -560,3 +560,285 @@ document.getElementById("play").addEventListener("click", event => {
 
 	animate();
 });
+
+//Train
+
+const handleTrain = async event => {
+	const EPISODES = 100;
+	let epsilon = 0.5;
+	const EPSILON_DECAY = 0.9999;
+	const MIN_EPSILON = 0.01;
+	const DISCOUNT = 0.99;
+	const MIN_REPLAY_MEMORY_SIZE = 1000;
+	const MINIBATCH_SIZE = 10;
+	const REPLAY_MEMORY_SIZE = 50000;
+	let epoch = 1;
+	let episode = 1;
+
+	const train = async function () {
+		if (epoch >= 30000000) {
+			// await model.save(`downloads://my-model-episode-${episode}-v4`);
+			reset();
+			episode++;
+			epoch = 1;
+			epsilon = 0.5;
+		}
+
+		const currentState = [
+			chassisBody.position.x / 50,
+			chassisBody.position.y / 50,
+			chassisBody.position.z / 50,
+			chassisBody.velocity.x / 17,
+			chassisBody.velocity.z / 17,
+			chassisBody.quaternion.x,
+			chassisBody.quaternion.z,
+		];
+
+		const state = tf.tensor2d(currentState, [1, currentState.length]);
+
+		const actionSet = [
+			// "left",
+			// "right",
+			"left-forward",
+			"left-backward",
+			"right-forward",
+			"right-backward",
+			"forward",
+			"backward",
+			"brake",
+			"nothing",
+		];
+
+		// console.log(currentState);
+		// state.print();
+		// console.log(state);
+		let useNetwork = true;
+		if (Math.random() < epsilon) {
+			useNetwork = false;
+			console.log(`making random move (epsilon = ${epsilon})`);
+		}
+
+		const preds = model.predict(state);
+		state.dispose();
+
+		const predsArr = preds.dataSync();
+		// console.log("preds");
+		// preds.print();
+		preds.dispose();
+
+		const actionIndex = useNetwork
+			? predsArr.indexOf(Math.max(...predsArr))
+			: Math.floor(Math.random() * 6);
+
+		const action = actionSet[actionIndex];
+		console.log("action", action);
+
+		switch (action) {
+			// case "left":
+			// 	vehicle.setSteeringValue(0.5, 0);
+			// 	vehicle.setSteeringValue(0.5, 1);
+			// 	break;
+			// case "right":
+			// 	vehicle.setSteeringValue(-0.5, 0);
+			// 	vehicle.setSteeringValue(-0.5, 1);
+			// 	break;
+			case "left-forward":
+				vehicle.setSteeringValue(0.5, 0);
+				vehicle.setSteeringValue(0.5, 1);
+				vehicle.applyEngineForce(500, 0);
+				vehicle.applyEngineForce(500, 1);
+				vehicle.applyEngineForce(500, 2);
+				vehicle.applyEngineForce(500, 3);
+				break;
+			case "right-forward":
+				vehicle.setSteeringValue(-0.5, 0);
+				vehicle.setSteeringValue(-0.5, 1);
+				vehicle.applyEngineForce(500, 0);
+				vehicle.applyEngineForce(500, 1);
+				vehicle.applyEngineForce(500, 2);
+				vehicle.applyEngineForce(500, 3);
+				break;
+			case "left-backward":
+				vehicle.setSteeringValue(0.5, 0);
+				vehicle.setSteeringValue(0.5, 1);
+				vehicle.applyEngineForce(-500, 0);
+				vehicle.applyEngineForce(-500, 1);
+				vehicle.applyEngineForce(-500, 2);
+				vehicle.applyEngineForce(-500, 3);
+				break;
+			case "right-backward":
+				vehicle.setSteeringValue(-0.5, 0);
+				vehicle.setSteeringValue(-0.5, 1);
+				vehicle.applyEngineForce(-500, 0);
+				vehicle.applyEngineForce(-500, 1);
+				vehicle.applyEngineForce(-500, 2);
+				vehicle.applyEngineForce(-500, 3);
+				break;
+			case "forward":
+				vehicle.setSteeringValue(0, 0);
+				vehicle.setSteeringValue(0, 1);
+				vehicle.applyEngineForce(500, 0);
+				vehicle.applyEngineForce(500, 1);
+				vehicle.applyEngineForce(500, 2);
+				vehicle.applyEngineForce(500, 3);
+				break;
+			case "backward":
+				vehicle.setSteeringValue(0, 0);
+				vehicle.setSteeringValue(0, 1);
+				vehicle.applyEngineForce(-500, 0);
+				vehicle.applyEngineForce(-500, 1);
+				vehicle.applyEngineForce(-500, 2);
+				vehicle.applyEngineForce(-500, 3);
+				break;
+			case "brake":
+				vehicle.setBrake(50, 0);
+				vehicle.setBrake(50, 1);
+				vehicle.setBrake(50, 2);
+				vehicle.setBrake(50, 3);
+				break;
+			case "nothing":
+				vehicle.applyEngineForce(0, 0);
+				vehicle.applyEngineForce(0, 1);
+				vehicle.applyEngineForce(0, 2);
+				vehicle.applyEngineForce(0, 3);
+				vehicle.setBrake(0, 0);
+				vehicle.setBrake(0, 1);
+				vehicle.setBrake(0, 2);
+				vehicle.setBrake(0, 3);
+				vehicle.setSteeringValue(0, 0);
+				vehicle.setSteeringValue(0, 1);
+				break;
+		}
+
+		updatePhysics();
+
+		let done = false;
+
+		let reward = (142 - chassisBody.position.distanceTo(finish.position)) / 200;
+
+		if (chassisBody.position.distanceTo(finish.position) < 1.3) {
+			reward = 1;
+			done = true;
+			score++;
+			document.getElementById("score").innerHTML = score;
+		}
+
+		console.log("distance", chassisBody.position.distanceTo(finish.position));
+		console.log("reward", reward);
+
+		const newCurrentState = [
+			chassisBody.position.x / 50,
+			chassisBody.position.y / 50,
+			chassisBody.position.z / 50,
+			chassisBody.velocity.x / 17,
+			chassisBody.velocity.z / 17,
+			chassisBody.quaternion.x,
+			chassisBody.quaternion.z,
+		];
+
+		if (done) {
+			reset();
+		}
+
+		if (replayMemory.length >= REPLAY_MEMORY_SIZE) {
+			replayMemory.shift();
+		}
+
+		replayMemory.push([
+			currentState,
+			actionIndex,
+			reward,
+			newCurrentState,
+			done,
+		]);
+
+		// console.log("memory length", replayMemory.length);
+
+		if (epsilon !== MIN_EPSILON) {
+			epsilon = Math.max(MIN_EPSILON, epsilon * EPSILON_DECAY);
+		}
+
+		if (replayMemory.length < MIN_REPLAY_MEMORY_SIZE) {
+			// console.log("memory length", replayMemory.length);
+			return;
+		}
+
+		const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
+
+		const currentStates = [];
+		// const actionIndices = [];
+		// const rewards = [];
+		// const newCurrentStates = [];
+		// const dones = [];
+		// const states = [];
+		// const newStates = [];
+		// const currentQs = [];
+		// const futureQs = [];
+		const updatedQs = [];
+
+		miniBatch.forEach(([state, action, reward, nextState, done], index) => {
+			currentStates.push(state);
+
+			const x = tf.tensor2d(state, [1, 7]);
+			const currentQ = model.predict(x);
+
+			// console.log("batch", [state, action, reward, nextState, done]);
+			// console.log("x");
+			// x.print();
+			// console.log("currentQ");
+			// currentQ.print();
+
+			const newState = tf.tensor2d(nextState, [1, 7]);
+			const futureQ = model.predict(newState);
+
+			// console.log("newState");
+			// newState.print();
+			// console.log("futureQ");
+			// futureQ.print();
+
+			const currentQData = currentQ.dataSync();
+			// console.log("currentQData[action]", currentQData[action]);
+
+			currentQData[action] = !done
+				? reward + DISCOUNT * futureQ.max().dataSync()
+				: reward;
+
+			// console.log("currentQData[action]", currentQData[action]);
+			// console.log("currentQ");
+			// currentQ.print();
+
+			updatedQs.push(currentQData);
+
+			x.dispose();
+			newState.dispose();
+			currentQ.dispose();
+			futureQ.dispose();
+		});
+
+		const X = tf.tensor2d(currentStates);
+
+		const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, actionSet.length]);
+
+		console.log("epoch:", epoch);
+
+		await model.fit(X, y);
+		console.log("trained!");
+
+		epoch++;
+
+		X.dispose();
+		y.dispose();
+	};
+
+	async function animate() {
+		await train();
+		// console.log("trained!");
+		requestAnimationFrame(animate);
+		// updatePhysics();
+		debugRenderer.update();
+		renderer.render(scene, camera);
+	}
+	animate();
+};
+
+document.getElementById("train").addEventListener("click", handleTrain);
