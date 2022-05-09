@@ -314,6 +314,7 @@ const handleLoadModel = async event => {
 	document.removeEventListener("keyup", handleKeyUp);
 	cancelAnimationFrame(reqAnimationFramePlay);
 	cancelAnimationFrame(reqAnimationFrameModel);
+	cancelAnimationFrame(reqAnimationFrameTrain);
 
 	reset();
 
@@ -541,6 +542,7 @@ let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
 	cancelAnimationFrame(reqAnimationFrameModel);
 	cancelAnimationFrame(reqAnimationFramePlay);
+	cancelAnimationFrame(reqAnimationFrameTrain);
 	reset();
 	document.addEventListener("keydown", handleKeyDown);
 
@@ -578,6 +580,13 @@ const handleTrain = async event => {
 	let episode = 1;
 
 	const train = async function () {
+		document.removeEventListener("keydown", handleKeyDown);
+		document.removeEventListener("keyup", handleKeyUp);
+		cancelAnimationFrame(reqAnimationFramePlay);
+		cancelAnimationFrame(reqAnimationFrameModel);
+		cancelAnimationFrame(reqAnimationFrameTrain);
+
+		reset();
 		const replayMemory = [];
 
 		const model = tf.sequential();
