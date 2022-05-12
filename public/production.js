@@ -351,7 +351,8 @@ const handleLoadModel = async event => {
 	let move = 1;
 
 	const modelDrive = async function () {
-		console.log("move:", move);
+		// console.log("move:", move);
+		addToConsole(`move: ${move}`);
 
 		const currentState = [
 			chassisBody.position.x / 50,
@@ -386,7 +387,8 @@ const handleLoadModel = async event => {
 		const actionIndex = predsArr.indexOf(Math.max(...predsArr));
 
 		const action = actionSet[actionIndex];
-		console.log("action", action);
+		// console.log("action", action);
+		addToConsole(`action: ${action}`);
 
 		switch (action) {
 			case "left-forward":
@@ -470,8 +472,13 @@ const handleLoadModel = async event => {
 			document.getElementById("score").innerHTML = "Score: " + score;
 		}
 
-		console.log("distance", chassisBody.position.distanceTo(finish.position));
-		console.log("reward", reward);
+		// console.log("distance", chassisBody.position.distanceTo(finish.position));
+		addToConsole(
+			`distance: ${chassisBody.position.distanceTo(finish.position)}`
+		);
+
+		// console.log("reward", reward);
+		addToConsole(`reward: ${reward}`);
 
 		if (done) {
 			reset();

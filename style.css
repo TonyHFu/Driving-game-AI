@@ -26,3 +26,7 @@ body {
 	z-index: 99;
 	color: white;
 }
+
+li {
+	list-style-type: none;
+}
