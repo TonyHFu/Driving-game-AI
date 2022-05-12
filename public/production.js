@@ -563,6 +563,7 @@ const handleKeyUp = event => {
 
 let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
+	addToConsole(`You have taken over!`);
 	cancelAnimationFrame(reqAnimationFrameModel);
 	cancelAnimationFrame(reqAnimationFramePlay);
 	cancelAnimationFrame(reqAnimationFrameTrain);
@@ -593,6 +594,7 @@ document.getElementById("play").addEventListener("click", event => {
 let reqAnimationFrameTrain;
 
 const handleTrain = async event => {
+	addToConsole(`You are in training mode!`);
 	document.removeEventListener("keydown", handleKeyDown);
 	document.removeEventListener("keyup", handleKeyUp);
 	cancelAnimationFrame(reqAnimationFramePlay);
@@ -659,7 +661,8 @@ const handleTrain = async event => {
 		let useNetwork = true;
 		if (Math.random() < epsilon) {
 			useNetwork = false;
-			console.log(`making random move (epsilon = ${epsilon})`);
+			// console.log(`making random move (epsilon = ${epsilon})`);
+			addToConsole(`making random move (epsilon = ${epsilon})`);
 		}
 
 		const preds = model.predict(state);
@@ -675,7 +678,8 @@ const handleTrain = async event => {
 			: Math.floor(Math.random() * 6);
 
 		const action = actionSet[actionIndex];
-		console.log("action", action);
+		// console.log("action", action);
+		addToConsole(`action: ${action}`);
 
 		switch (action) {
 			// case "left":
@@ -767,8 +771,13 @@ const handleTrain = async event => {
 			document.getElementById("score").innerHTML = "Score: " + score;
 		}
 
-		console.log("distance", chassisBody.position.distanceTo(finish.position));
-		console.log("reward", reward);
+		// console.log("distance", chassisBody.position.distanceTo(finish.position));
+		addToConsole(
+			`distance: ${chassisBody.position.distanceTo(finish.position)}`
+		);
+
+		// console.log("reward", reward);
+		addToConsole(`reward: ${reward}`);
 
 		const newCurrentState = [
 			chassisBody.position.x / 50,
@@ -856,10 +865,12 @@ const handleTrain = async event => {
 
 		const y = tf.tensor2d(updatedQs, [MINIBATCH_SIZE, actionSet.length]);
 
-		console.log("epoch:", epoch);
+		// console.log("epoch:", epoch);
+		addToConsole(`epoch: ${epoch}`);
 
 		await model.fit(X, y);
-		console.log("trained!");
+		// console.log("trained!");
+		addToConsole(`trained!`);
 
 		epoch++;
 
