@@ -4,6 +4,8 @@ A driving game made using ThreeJS and Cannon ES
 
 Also uses Tensorflow JS to train a Deep Q Network for Reinforcement Learning
 
+You can find the live version [here](https://self-driving-ai-dql.netlify.app/)  
+
 ## References:
 
 ThreeJS and Cannon JS
