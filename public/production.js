@@ -333,9 +333,15 @@ const addToConsole = msg => {
 	displayConsole.append(newMessage);
 };
 
+let mode = null;
+
 let reqAnimationFrameModel;
 
 const handleLoadModel = async event => {
+	if (mode === "model") {
+		return addToConsole("You are already in AI mode");
+	}
+	mode = "model";
 	addToConsole("AI is now driving");
 	document.removeEventListener("keydown", handleKeyDown);
 	document.removeEventListener("keyup", handleKeyUp);
@@ -563,6 +569,10 @@ const handleKeyUp = event => {
 
 let reqAnimationFramePlay;
 document.getElementById("play").addEventListener("click", event => {
+	if (mode === "play") {
+		return addToConsole("You are already in play mode");
+	}
+	mode = "play";
 	addToConsole(`You have taken over!`);
 	cancelAnimationFrame(reqAnimationFrameModel);
 	cancelAnimationFrame(reqAnimationFramePlay);
@@ -594,6 +604,10 @@ document.getElementById("play").addEventListener("click", event => {
 let reqAnimationFrameTrain;
 
 const handleTrain = async event => {
+	if (mode === "train") {
+		return addToConsole("You are already in training mode");
+	}
+	mode = "train";
 	addToConsole(`You are in training mode!`);
 	document.removeEventListener("keydown", handleKeyDown);
 	document.removeEventListener("keyup", handleKeyUp);
@@ -622,13 +636,13 @@ const handleTrain = async event => {
 		model.add(tf.layers.dense({ units: 20, activation: "relu" }));
 		model.add(tf.layers.dense({ units: 8 }));
 		model.compile({ optimizer: "adam", loss: "meanSquaredError" });
-		if (epoch >= 30000000) {
-			// await model.save(`downloads://my-model-episode-${episode}-v4`);
-			reset();
-			episode++;
-			epoch = 1;
-			epsilon = 0.5;
-		}
+		// if (epoch >= 30000000) {
+		// 	await model.save(`downloads://my-model-episode-${episode}-v4`);
+		// 	reset();
+		// 	episode++;
+		// 	epoch = 1;
+		// 	epsilon = 0.5;
+		// }
 
 		const currentState = [
 			chassisBody.position.x / 50,
@@ -643,8 +657,6 @@ const handleTrain = async event => {
 		const state = tf.tensor2d(currentState, [1, currentState.length]);
 
 		const actionSet = [
-			// "left",
-			// "right",
 			"left-forward",
 			"left-backward",
 			"right-forward",
@@ -655,13 +667,9 @@ const handleTrain = async event => {
 			"nothing",
 		];
 
-		// console.log(currentState);
-		// state.print();
-		// console.log(state);
 		let useNetwork = true;
 		if (Math.random() < epsilon) {
 			useNetwork = false;
-			// console.log(`making random move (epsilon = ${epsilon})`);
 			addToConsole(
 				`Epsilon = ${Math.round(epsilon * 100) / 100} - making random move`
 			);

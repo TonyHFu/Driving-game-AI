@@ -25,6 +25,7 @@ body {
 	height: 100%;
 	z-index: 99;
 	color: white;
+	width: 300px;
 }
 
 li {
