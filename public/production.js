@@ -336,19 +336,7 @@ const handleLoadModel = async event => {
 
 	const model = await tf.loadLayersModel("/public/model/model.json");
 
-	// const EPISODES = 100;
-	// let epsilon = 0.5;
-	// const EPSILON_DECAY = 0.9999;
-	// const MIN_EPSILON = 0.01;
-	// const DISCOUNT = 0.99;
-	// const MIN_REPLAY_MEMORY_SIZE = 1000;
-	// const MINIBATCH_SIZE = 10;
-	// const REPLAY_MEMORY_SIZE = 50000;
-	// let epoch = 1;
-	// let episode = 1;
 	let move = 1;
-
-	// const replayMemory = [];
 
 	const modelDrive = async function () {
 		console.log("move:", move);
@@ -593,7 +581,7 @@ const handleTrain = async event => {
 	cancelAnimationFrame(reqAnimationFrameTrain);
 	reset();
 
-	const EPISODES = 100;
+	// const EPISODES = 100;
 	let epsilon = 0.5;
 	const EPSILON_DECAY = 0.9999;
 	const MIN_EPSILON = 0.01;
@@ -602,7 +590,7 @@ const handleTrain = async event => {
 	const MINIBATCH_SIZE = 10;
 	const REPLAY_MEMORY_SIZE = 50000;
 	let epoch = 1;
-	let episode = 1;
+	// let episode = 1;
 	const replayMemory = [];
 
 	const train = async function () {
@@ -803,14 +791,7 @@ const handleTrain = async event => {
 		const miniBatch = _.sampleSize(replayMemory, MINIBATCH_SIZE);
 
 		const currentStates = [];
-		// const actionIndices = [];
-		// const rewards = [];
-		// const newCurrentStates = [];
-		// const dones = [];
-		// const states = [];
-		// const newStates = [];
-		// const currentQs = [];
-		// const futureQs = [];
+
 		const updatedQs = [];
 
 		miniBatch.forEach(([state, action, reward, nextState, done], index) => {

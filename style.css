@@ -17,3 +17,10 @@ body {
 	top: 5px;
 	color: teal;
 }
+
+#console {
+	position: fixed;
+	right: 0;
+	top: 0;
+	height: 100%;
+}
