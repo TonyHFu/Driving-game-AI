@@ -322,9 +322,21 @@ function updatePhysics() {
 
 //For production server on netlify
 
+const addToConsole = msg => {
+	const displayConsole = document.getElementById("console");
+	const consoleLength = displayConsole.children.length;
+	if (consoleLength > 10) {
+		displayConsole.removeChild(displayConsole.firstElementChild);
+	}
+	const newMessage = document.createElement("li");
+	newMessage.appendChild(document.createTextNode(msg));
+	displayConsole.append(newMessage);
+};
+
 let reqAnimationFrameModel;
 
 const handleLoadModel = async event => {
+	addToConsole("AI is now driving");
 	document.removeEventListener("keydown", handleKeyDown);
 	document.removeEventListener("keyup", handleKeyUp);
 	cancelAnimationFrame(reqAnimationFramePlay);
