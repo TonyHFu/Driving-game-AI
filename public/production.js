@@ -662,9 +662,14 @@ const handleTrain = async event => {
 		if (Math.random() < epsilon) {
 			useNetwork = false;
 			// console.log(`making random move (epsilon = ${epsilon})`);
-			addToConsole(`making random move (epsilon = ${epsilon})`);
+			addToConsole(
+				`Epsilon = ${Math.round(epsilon * 100) / 100} - making random move`
+			);
+		} else {
+			addToConsole(
+				`Epsilon = ${Math.round(epsilon * 100) / 100} - not making random move`
+			);
 		}
-
 		const preds = model.predict(state);
 		state.dispose();
 
