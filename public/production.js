@@ -272,6 +272,21 @@ const reset = () => {
 	vehicle.setSteeringValue(0, 1);
 };
 
+const softReset = () => {
+	vehicle.applyEngineForce(0, 0);
+	vehicle.applyEngineForce(0, 1);
+	vehicle.applyEngineForce(0, 2);
+	vehicle.applyEngineForce(0, 3);
+
+	vehicle.setBrake(0, 0);
+	vehicle.setBrake(0, 1);
+	vehicle.setBrake(0, 2);
+	vehicle.setBrake(0, 3);
+
+	vehicle.setSteeringValue(0, 0);
+	vehicle.setSteeringValue(0, 1);
+};
+
 document.body.appendChild(renderer.domElement);
 
 //Event listeners
@@ -316,23 +331,24 @@ const handleLoadModel = async event => {
 	cancelAnimationFrame(reqAnimationFrameModel);
 	cancelAnimationFrame(reqAnimationFrameTrain);
 
-	reset();
+	// reset();
+	softReset();
 
 	const model = await tf.loadLayersModel("/public/model/model.json");
 
-	const EPISODES = 100;
-	let epsilon = 0.5;
-	const EPSILON_DECAY = 0.9999;
-	const MIN_EPSILON = 0.01;
-	const DISCOUNT = 0.99;
-	const MIN_REPLAY_MEMORY_SIZE = 1000;
-	const MINIBATCH_SIZE = 10;
-	const REPLAY_MEMORY_SIZE = 50000;
-	let epoch = 1;
-	let episode = 1;
+	// const EPISODES = 100;
+	// let epsilon = 0.5;
+	// const EPSILON_DECAY = 0.9999;
+	// const MIN_EPSILON = 0.01;
+	// const DISCOUNT = 0.99;
+	// const MIN_REPLAY_MEMORY_SIZE = 1000;
+	// const MINIBATCH_SIZE = 10;
+	// const REPLAY_MEMORY_SIZE = 50000;
+	// let epoch = 1;
+	// let episode = 1;
 	let move = 1;
 
-	const replayMemory = [];
+	// const replayMemory = [];
 
 	const modelDrive = async function () {
 		console.log("move:", move);
@@ -543,7 +559,9 @@ document.getElementById("play").addEventListener("click", event => {
 	cancelAnimationFrame(reqAnimationFrameModel);
 	cancelAnimationFrame(reqAnimationFramePlay);
 	cancelAnimationFrame(reqAnimationFrameTrain);
-	reset();
+	alert("Use WASD to drive!");
+	// reset();
+	softReset();
 	document.addEventListener("keydown", handleKeyDown);
 
 	document.addEventListener("keyup", handleKeyUp);
